@@ -1,0 +1,28 @@
+# Credenciales y secretos
+.env
+.env.*
+secrets/
+
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Testing
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+.aider*
