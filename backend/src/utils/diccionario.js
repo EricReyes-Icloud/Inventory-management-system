@@ -16,6 +16,6 @@ const diccionarioCategorias = {
     Uva: ["Uva * 30"]
   };
 
-  module.exports = {
-    diccionarioCategorias
-  };
+module.exports = {
+  diccionarioCategorias
+};
