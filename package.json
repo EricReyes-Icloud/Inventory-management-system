@@ -1,0 +1,31 @@
+{
+  "name": "inventory-management-system",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "description": "Sistema de gestión de inventario desarrollado para una empresa real del sector alimenticio.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "npm run dev -w backend",
+    "test": "npm run test -w backend",
+    "build": "npm run build -w backend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EricReyes-Icloud/Inventory-management-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/EricReyes-Icloud/Inventory-management-system/issues"
+  },
+  "homepage": "https://github.com/EricReyes-Icloud/Inventory-management-system#readme"
+}
