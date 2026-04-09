@@ -3,29 +3,25 @@ const db = require("../lib/firestore");
 const { diccionarioCategorias } = require("../utils/diccionario.js");
 const { obtenerMesAnio } = require("../utils/fechas.js");
 const { FieldValue } = require("firebase-admin/firestore");
+const { normalizarTexto } = require("../utils/normalizarTexto.js");
 
-/* ================= UTILIDADES ================= */
-
-function normalizarTexto(texto = "") {
-  return texto
-    .toString()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[*]/g, " ")
-    .replace(/\b(clavos)\b/g, "clavo")
-    .replace(/\b(botellas)\b/g, "botella")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function obtenerCategoria(nombre) {
   const skuNormalizado = normalizarTexto(nombre);
 
-  for (const categoria of Object.keys(diccionarioCategorias)) {
-    const categoriaNormalizada = normalizarTexto(categoria);
+  const categoriasOrdenadas = Object.keys(diccionarioCategorias)
+    .sort((a, b) => {
+      const aNorm = normalizarTexto(a.replace(/_/g, " "));
+      const bNorm = normalizarTexto(b.replace(/_/g, " "));
+      return bNorm.length - aNorm.length;
+    });
 
-    if (skuNormalizado.startsWith(categoriaNormalizada)) {
+  for (const categoria of categoriasOrdenadas) {
+    const categoriaNormalizada = normalizarTexto(
+      categoria.replace(/_/g, " ")
+    );
+
+    if (skuNormalizado.includes(categoriaNormalizada)) {
       return categoria;
     }
   }
@@ -33,6 +29,7 @@ function obtenerCategoria(nombre) {
   console.warn(`⚠️ SKU sin categoría definida: ${nombre}`);
   return null;
 }
+
 
 /* ================= CONTABILIDAD MENSUAL ================= */
 
@@ -225,4 +222,5 @@ async function generarHistoricoMensual(mesAnio) {
 module.exports = {
   procesarTotalesYCartones,
   generarHistoricoMensual,
+  obtenerCategoria
 };
