@@ -1,12 +1,12 @@
 const express = require("express");
-const bodyParser = require("body-parser");
-const twilio = require("twilio");
+const bodyParser = require("body-parser"); //Para leer el body de la request
+const twilio = require("twilio"); //SDK de Twilio
 const { procesarMensajeTwilio } = require("../brain/inturis.js");
 
-const router = express.Router();
-router.use(bodyParser.urlencoded({ extended: false }));
+const router = express.Router(); // Mini-servidor modular
+router.use(bodyParser.urlencoded({ extended: false })); // Permite el formato de Twilio
 
-// 🧹 Limpieza previa del mensaje para eliminar saludos, nombres o texto no útil
+// Limpieza previa del mensaje para eliminar saludos, nombres o texto no útil
 function limpiarMensajePedido(texto) {
   let mensaje = texto.toLowerCase();
 
@@ -24,9 +24,9 @@ function limpiarMensajePedido(texto) {
   return mensaje;
 }
 
-// 🧠 Detecta si el mensaje contiene el nombre de un cliente
+// Detecta si el mensaje contiene el nombre de un cliente
 function detectarYRemoverCliente(mensaje) {
-  const clientes = ["hernan", "mauricio", "esperanza", "edwin"];
+  const clientes = ["hernan", "mauricio", "esperanza", "edwin"];// Debemos cambiar por DB
   let clienteDetectado = null;
 
   for (const nombre of clientes) {
@@ -41,7 +41,7 @@ function detectarYRemoverCliente(mensaje) {
   return { clienteDetectado, mensajeLimpio: mensaje };
 }
 
-// 🔍 Verifica si el mensaje tiene la estructura de un pedido
+// Verifica si el mensaje tiene la estructura de un pedido
 function esPedidoValido(texto) {
   const mensaje = texto.toLowerCase();
   const patronPedido = /\b\d+\s+(?:[a-záéíóúñ]+(?:\s+[a-záéíóúñ]+)*)\b/;
@@ -49,7 +49,7 @@ function esPedidoValido(texto) {
   return patronPedido.test(mensaje) || palabrasNumeros.test(mensaje);
 }
 
-// 🟢 Endpoint público de Twilio
+// Endpoint público de Twilio
 router.post("/webhook/whatsapp", async (req, res) => {
   const twiml = new twilio.twiml.MessagingResponse();
 
@@ -57,13 +57,13 @@ router.post("/webhook/whatsapp", async (req, res) => {
     let mensaje = req.body.Body?.trim() || "";
     const telefono = req.body.From;
 
-    console.log("📩 Mensaje original:", mensaje, "de", telefono);
+    console.log("Mensaje original:", mensaje, "de", telefono);
 
-    // 🧹 Limpieza general
+    // Limpieza general
     mensaje = limpiarMensajePedido(mensaje);
-    console.log("✨ Mensaje limpiado:", mensaje);
+    console.log("✨ Mensaje limpio:", mensaje);
 
-    // 🧠 Detectar cliente y limpiar el mensaje de su nombre
+    // Detectar cliente y limpiar el mensaje de su nombre
     const { clienteDetectado, mensajeLimpio } = detectarYRemoverCliente(mensaje);
     mensaje = mensajeLimpio;
 
@@ -73,7 +73,7 @@ router.post("/webhook/whatsapp", async (req, res) => {
       console.log("⚠️ No se detectó ningún cliente en el mensaje.");
     }
 
-    // ✅ Validar estructura del pedido
+    // Validar estructura del pedido
     if (!esPedidoValido(mensaje)) {
       console.log("⚠️ Mensaje no válido como pedido. Se notifica al cliente.");
       twiml.message("⚠️ Esto no es un pedido. Por favor, escribe el pedido en formato correcto (ej: '2 clavos de 100').");
@@ -81,7 +81,7 @@ router.post("/webhook/whatsapp", async (req, res) => {
       return res.end(twiml.toString());
     }
 
-    // 🔁 Enviar mensaje limpio a Inturis junto con el cliente detectado
+    // Enviar mensaje limpio a Inturis junto con el cliente detectado
     const interpretacion = await procesarMensajeTwilio(mensaje, telefono, clienteDetectado);
     console.log("🧠 Interpretación:", JSON.stringify(interpretacion, null, 2));
 
@@ -92,7 +92,7 @@ router.post("/webhook/whatsapp", async (req, res) => {
       return res.end(twiml.toString());
     }
 
-    // ✅ Responder con confirmación
+    // Responder con confirmación
     twiml.message(`✅ Pedido recibido correctamente${clienteDetectado ? `, ${clienteDetectado}` : ""}. ¡Gracias por tu mensaje!`);
     res.writeHead(200, { "Content-Type": "text/xml" });
     res.end(twiml.toString());
