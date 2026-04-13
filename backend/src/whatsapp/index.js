@@ -10,7 +10,7 @@ router.use(bodyParser.urlencoded({ extended: false })); // Permite el formato de
 function limpiarMensajePedido(texto) {
   let mensaje = texto.toLowerCase();
 
-  // Elimina texto antes de los dos puntos (ej: "hernan:", "juan dice:")
+  // Elimina texto antes de los dos puntos (ej: "hernan:", "juan dice:") a travez de regex
   mensaje = mensaje.replace(/^[a-záéíóúñ\s]+:\s*/i, "");
 
   // Elimina saludos comunes
@@ -100,7 +100,7 @@ router.post("/webhook/whatsapp", async (req, res) => {
   } catch (error) {
     console.error("❌ Error al procesar mensaje:", error);
     const errorTwiml = new twilio.twiml.MessagingResponse();
-    errorTwiml.message("⚠️ Ocurrió un error interno. Por favor, intenta más tarde.");
+    errorTwiml.message("⚠️ Ocurrió un error interno. Por favor, intenta más tarde y comunícate con servicio técnico de inmediato.");
     res.writeHead(200, { "Content-Type": "text/xml" });
     res.end(errorTwiml.toString());
   }
