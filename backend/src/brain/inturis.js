@@ -1,22 +1,6 @@
 //------------------------------------------ INTURIS BRAIN -------------------------------------------//
 const Fuse = require("fuse.js");
-
-// ----------------------
-// 1. Normalizador de texto
-// ----------------------
-function normalizarTexto(texto) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s]/g, "") // quita símbolos raros
-    .replace(/\bclavos\b/g, "clavo")
-    .replace(/\bajies\b/g, "aji")
-    .replace(/\bmieles\b/g, "miel")
-    .replace(/\bde\b/g, "*") // 🔥 convierte “de” en “*”
-    .replace(/\s+/g, " ") // limpia dobles espacios
-    .trim();
-}
+const { normalizarTexto } = require("../utils/normalizarTexto");
 
 // ----------------------
 // 2. Diccionario de palabras numéricas
@@ -286,4 +270,4 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
 }
 
 // Exportamos ambas funciones
-module.exports = { interpretarPedido, procesarMensajeTwilio };
+module.exports = { interpretarPedido, procesarMensajeTwilio, normalizarTexto };
