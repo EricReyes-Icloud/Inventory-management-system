@@ -33,7 +33,7 @@ function obtenerCategoria(nombre) {
 
 /* ================= CONTABILIDAD MENSUAL ================= */
 
-async function procesarTotalesYCartones(items, fechaPedido) {
+function calcularOperacionesTotalesYCartones(items, fechaPedido) {
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error("Items inválidos para contabilidad");
   }
@@ -42,40 +42,39 @@ async function procesarTotalesYCartones(items, fechaPedido) {
     throw new Error("fechaPedido inválida");
   }
 
+  const operaciones = [];
   const mesAnio = obtenerMesAnio(fechaPedido);
 
-  const totalMesRef = db.collection("Total Productos").doc(mesAnio);
-  const cartonesMesRef = db.collection("Cartones_vendidos").doc(mesAnio);
-
-  const batch = db.batch();
+  const totalMesPath = `Total Productos/${mesAnio}`;
+  const cartonesMesPath = `Cartones_vendidos/${mesAnio}`;
 
   /* ==============================
      1️⃣ ASEGURAR DOCUMENTO PRINCIPAL
   =============================== */
 
-  batch.set(
-    totalMesRef,
-    {
+  operaciones.push({
+    ref: totalMesPath,
+    data: {
       mesAnio,
       totalGeneral: FieldValue.increment(0),
       estado: "abierto",
       creadoEn: FieldValue.serverTimestamp(),
       actualizadoEn: FieldValue.serverTimestamp(),
     },
-    { merge: true }
-  );
+    options: { merge: true },
+  });
 
-  batch.set(
-    cartonesMesRef,
-    {
+  operaciones.push({
+    ref: cartonesMesPath,
+    data: {
       mesAnio,
       totalGeneral: FieldValue.increment(0),
       estado: "abierto",
       creadoEn: FieldValue.serverTimestamp(),
       actualizadoEn: FieldValue.serverTimestamp(),
     },
-    { merge: true }
-  );
+    options: { merge: true },
+  });
 
   /* ==============================
      2️⃣ PROCESAR ITEMS
@@ -89,70 +88,60 @@ async function procesarTotalesYCartones(items, fechaPedido) {
     const subtotal = Number(it.subtotal || 0);
     const cantidad = Number(it.cantidad || 0);
 
-    const productoTotalRef = totalMesRef
-      .collection("productos")
-      .doc(categoria);
+    const productoTotalPath = `${totalMesPath}/productos/${categoria}`;
+    const skuTotalPath = `${productoTotalPath}/skus/${sku}`;
 
-    const skuTotalRef = productoTotalRef
-      .collection("skus")
-      .doc(sku);
-
-    const productoCartonRef = cartonesMesRef
-      .collection("productos")
-      .doc(categoria);
-
-    const skuCartonRef = productoCartonRef
-      .collection("skus")
-      .doc(sku);
+    const productoCartonPath = `${cartonesMesPath}/productos/${categoria}`;
+    const skuCartonPath = `${productoCartonPath}/skus/${sku}`;
 
     /* ===== 💰 DINERO ===== */
 
-    batch.set(
-      productoTotalRef,
-      { total: FieldValue.increment(subtotal) },
-      { merge: true }
-    );
+    operaciones.push({
+      ref: productoTotalPath,
+      data: { total: FieldValue.increment(subtotal) },
+      options: { merge: true },
+    });
 
-    batch.set(
-      skuTotalRef,
-      { total: FieldValue.increment(subtotal) },
-      { merge: true }
-    );
+    operaciones.push({
+      ref: skuTotalPath,
+      data: { total: FieldValue.increment(subtotal) },
+      options: { merge: true },
+    });
 
-    batch.set(
-      totalMesRef,
-      {
+    operaciones.push({
+      ref: totalMesPath,
+      data: {
         totalGeneral: FieldValue.increment(subtotal),
         actualizadoEn: FieldValue.serverTimestamp(),
       },
-      { merge: true }
-    );
+      options: { merge: true },
+    });
 
     /* ===== 📦 CANTIDAD ===== */
 
-    batch.set(
-      productoCartonRef,
-      { total: FieldValue.increment(cantidad) },
-      { merge: true }
-    );
+    operaciones.push({
+      ref: productoCartonPath,
+      data: { total: FieldValue.increment(cantidad) },
+      options: { merge: true },
+    });
 
-    batch.set(
-      skuCartonRef,
-      { total: FieldValue.increment(cantidad) },
-      { merge: true }
-    );
+    operaciones.push({
+      ref: skuCartonPath,
+      data: { total: FieldValue.increment(cantidad) },
+      options: { merge: true },
+    });
 
-    batch.set(
-      cartonesMesRef,
-      {
+    operaciones.push({
+      ref: cartonesMesPath,
+      data: {
         totalGeneral: FieldValue.increment(cantidad),
         actualizadoEn: FieldValue.serverTimestamp(),
       },
-      { merge: true }
-    );
+      options: { merge: true },
+    });
   }
 
-  await batch.commit();
+  return operaciones;
 }
 
 /* ================= HISTÓRICO MENSUAL ================= */
@@ -220,7 +209,7 @@ async function generarHistoricoMensual(mesAnio) {
 /* ================= EXPORTS ================= */
 
 module.exports = {
-  procesarTotalesYCartones,
+  calcularOperacionesTotalesYCartones,
   generarHistoricoMensual,
   obtenerCategoria
 };
