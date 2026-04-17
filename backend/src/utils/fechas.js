@@ -6,8 +6,8 @@ const meses = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ];
 function obtenerMesAnio(fecha) {
-  const mes = meses[fecha.getMonth()];
-  const anio = fecha.getFullYear();
+  const mes = meses[fecha.getMonth()]; // Obtiene el número del mes (0-11)
+  const anio = fecha.getFullYear(); // Obtiene el año de la fecha 
   return `${mes} ${anio}`; // Ej: "Septiembre 2025"
 }
 
