@@ -1,5 +1,5 @@
 const db = require("../lib/firestore");
-const { procesarTotalesYCartones } = require("../services/contabilidad.service");
+const { calcularOperacionesTotalesYCartones } = require("../services/contabilidad.service");
 
 async function jobContableMensual() {
   console.log("🔄 Iniciando Job Contable");
@@ -12,6 +12,7 @@ async function jobContableMensual() {
   }
 
   let pedidosProcesados = 0;
+  let pedidosFallidos = 0;
 
   for (const clienteDoc of clientesSnap.docs) {
     const clienteId = clienteDoc.id;
@@ -29,7 +30,6 @@ async function jobContableMensual() {
       `📂 Rutas encontradas para ${clienteId}:`,
       mesesSnap.docs.map(d => d.id)
     );
-    
 
     if (mesesSnap.empty) {
       console.log(`ℹ️ Cliente ${clienteId} sin meses`);
@@ -58,68 +58,84 @@ async function jobContableMensual() {
       for (const pedidoDoc of pedidosSnap.docs) {
         const pedido = pedidoDoc.data();
         const pedidoRef = pedidoDoc.ref;
-      
+
         // 🔐 Validación defensiva de pago
         if (!pedido.pagado) {
-          console.log(`⏭ Pedido ${pedidoDoc.id} no está pagado, no se puede procesar`);
+          console.log(`⏭ Pedido ${pedidoDoc.id} no está pagado`);
           continue;
         }
-      
+
         // 🔐 Evita doble procesamiento
         if (pedido.contabilidadAplicada === true) {
-          console.log(`⏭ Pedido ${pedidoDoc.id} ya esta contabilizado`);
+          console.log(`⏭ Pedido ${pedidoDoc.id} ya contabilizado`);
           continue;
         }
-      
-        // 🔎 Validar detalle
+
+	// 🔎 Validar detalle
         if (!Array.isArray(pedido.detalle) || pedido.detalle.length === 0) {
           console.warn(`⚠️ Pedido ${pedidoDoc.id} sin detalles`);
           continue;
         }
-      
-        // 📅 Validar fecha
+
+	
+	// 📅 Validar fecha
         const fechaPedido =
           pedido.fechaPedido?.toDate?.() ?? pedido.fechaPedido;
-      
+
         if (!(fechaPedido instanceof Date)) {
           console.error(`❌ Pedido ${pedidoDoc.id} sin fecha válida`);
           continue;
         }
-      
+
         console.log(
           `➡️ Procesando pedido ${pedidoDoc.id} | ${clienteId} | ${mesAnio}`
         );
-      
+
         try {
-          await procesarTotalesYCartones(
+          // 🧠 1. Calcular operaciones
+          const operaciones = calcularOperacionesTotalesYCartones(
             pedido.detalle,
             fechaPedido
           );
-      
-          await pedidoRef.update({
-            estadoContable: "procesado", // ← mejor nombre que "procesado"
+
+          // 🧱 2. Crear batch
+          const batch = db.batch();
+
+          // 🔁 3. Aplicar operaciones
+          for (const op of operaciones) {
+            const ref = db.doc(op.ref);
+            batch.set(ref, op.data, op.options);
+          }
+
+          // ✅ 4. Marcar pedido como procesado (DENTRO del batch)
+          batch.update(pedidoRef, {
+            estadoContable: "procesado",
             contabilidadAplicada: true,
             fechaProcesado: new Date(),
           });
-      
+
+          // 🚀 5. Commit atómico
+          await batch.commit();
+
           pedidosProcesados++;
+
         } catch (error) {
+          pedidosFallidos++;
+
           console.error(
-            `❌ Error procesando pedido ${pedidoDoc.id}:`,
-            error.message
+            `❌ Error procesando pedido ${pedidoDoc.id} | Cliente: ${clienteId} | Mes: ${mesAnio}`
           );
+          console.error("🧨 Detalle:", error.message);
+
+          // ⚠️ No se marca como procesado → se reintentará en el siguiente job
         }
       }
     }
   }
 
-  if (pedidosProcesados === 0) {
-    console.log("ℹ️ No hay pedidos pendientes");
-  } else {
-    console.log(`✅ ${pedidosProcesados} pedidos procesados correctamente`);
-  }
-
   console.log("🏁 Job Contable finalizado");
+  console.log(`✅ Procesados: ${pedidosProcesados}`);
+  console.log(`❌ Fallidos: ${pedidosFallidos}`);
 }
 
 module.exports = jobContableMensual;

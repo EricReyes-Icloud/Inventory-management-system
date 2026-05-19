@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "types": ["node", "vitest"],
+    "esModuleInterop": true,
+
+    "strict": false,
+    "skipLibCheck": true,
+
+    "noEmit": true,
+
+    "ignoreDeprecations": "6.0" 
+  },
+  "include": ["tests"]
+}

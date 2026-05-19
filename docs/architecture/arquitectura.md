@@ -1,11 +1,11 @@
-#  Arquitectura del Sistema
-Condimentos El Colibrí - Inventory Management System
+##  Arquitectura del Sistema
+Inventory Management System
 
 ---
 
 ## 1. Visión General
 
-El sistema está diseñado bajo una arquitectura cliente-servidor, separando claramente el frontend del backend y utilizando una base de datos en la nube para garantizar disponibilidad, escalabilidad y seguridad.
+El sistema está diseñado bajo una arquitectura modular cliente-servidor, separando claramente el frontend del backend y utilizando una base de datos en la nube para garantizar disponibilidad, escalabilidad y seguridad.
 
 El objetivo principal es ofrecer una solución de gestión de inventario robusta, segura y preparada para crecimiento futuro.
 
@@ -13,7 +13,7 @@ El objetivo principal es ofrecer una solución de gestión de inventario robusta
 
 ## 2. Arquitectura General
 
-Frontend (Flutter)
+Frontend (React)
         ↓
 Backend API (Node.js + Express.js)
         ↓
@@ -45,9 +45,9 @@ Se encuentra organizado bajo una arquitectura basada en servicios:
 
 ---
 
-## 4. Frontend
+## 4. Frontend (futuro)
 
-Desarrollado en Flutter para permitir compatibilidad web y móvil.
+Desarrollado en React para mayor flexibilidad y facil conexión con el backend.
 
 El frontend:
 - Consume la API del backend
@@ -68,6 +68,8 @@ Colecciones principales:
 - Invertir
 - Ganancias
 - Usuarios
+- Total Productos
+- Cartones_vendidos
 
 Razones de elección:
 - Escalabilidad automática
@@ -118,7 +120,7 @@ La separación frontend/backend facilita futuras integraciones.
 
 ## 9. Diagrama de arquitectura
 
-![Arquitectura](./images/Diagrama%20de%20arquitectura.png)
+![Arquitectura](../images/Diagrama%20de%20arquitectura.png)
 
 
 ##  Estado Actual
