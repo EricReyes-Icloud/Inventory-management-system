@@ -143,15 +143,15 @@ El proyecto está diseñado para despliegue cloud-based.
 
 ### Posibles plataformas
 
-### Frontend
+#### Frontend
 - Vercel
 - Netlify
 
-### Backend
+#### Backend
 - Render
 - Railway
 
-### Database
+#### Database
 - Firebase Firestore
 
 ---
