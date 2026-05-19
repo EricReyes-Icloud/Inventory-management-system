@@ -4,12 +4,13 @@ const db = require("../lib/firestore");
 const router = express.Router();
 const admin = require("firebase-admin");
 const { interpretarPedido } = require("../brain/inturis");
+const { diccionarioCategorias } = require("../utils/diccionario")
 
 
 
 
 /**
---------------------------👉 Endpoint para registrar pedido libre-----------------------
+--------------------------    Endpoint para registrar pedido libre    ----------------------------
 */
 router.post("/pedido-libre", async (req, res) => {
   try {
@@ -22,20 +23,21 @@ router.post("/pedido-libre", async (req, res) => {
       return res.status(400).json({ error: "mensaje_requerido" });
     }
 
-  // ✅ Buscar cliente en Firestore (ignorando mayúsculas y tildes)
+  // Buscar cliente en Firestore (ignorando mayúsculas y tildes)
   const normalizar = (texto) =>
     texto
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, ""); // quita tildes
 
-      const clienteNormalizado = normalizar(cliente);
+      const clienteNormalizado = normalizar(cliente); // Normalizamos el cliente
 
-      const clientesSnap = await db.collection("Clientes").get();
+      const clientesSnap = await db.collection("Clientes").get(); // Traemos todos los clientes
 
       let clienteDoc = null;
 
-      clientesSnap.forEach((doc) => {
+      // Iteramos cada cliente y lo comparamos
+      clientesSnap.forEach((doc) => { 
         const nombreBD = doc.data().Nombre || "";
         if (normalizar(nombreBD) === clienteNormalizado) {
           clienteDoc = doc;
@@ -46,27 +48,25 @@ router.post("/pedido-libre", async (req, res) => {
         return res.status(404).json({ error: `cliente_no_encontrado: ${cliente}` });
       }
 
-    const clienteId = clienteDoc.id;
-
-
+    const clienteId = clienteDoc.id; // Guardamos el ID del cliente, para posteriores relaciones
 
 
 
 
 
     // --------------------
-    // 🧠 Interpretar pedido libre
+    // Interpretar pedido libre
     // --------------------
     const productosInterpretados = await interpretarPedido(mensaje);
 
     if (!productosInterpretados || productosInterpretados.length === 0) {
       return res.status(400).json({
         error: "ningun_producto_identificado",
-        sugerencias: Object.values(diccionarioCategorias).flat(),
+        sugerencias: Object.values(diccionarioCategorias).flat(), // Sugerimos productos validos
       });
     }
 
-    // 🧩 Buscar dinámicamente los docId dentro de Productos_ID
+    // Buscamos dinámicamente los docId dentro de Productos_ID
     const productosNormalizados = [];
 
     for (const p of productosInterpretados) {
@@ -76,10 +76,10 @@ router.post("/pedido-libre", async (req, res) => {
       const cantidad = p.cantidad || 1;
 
       try {
-        // Buscar el primer documento dentro de la subcolección del producto
+        // Buscamos el primer documento dentro de la subcolección del producto
         const subcolSnap = await db
           .collection("Productos")
-          .doc("Productos_ID")                // 🔥 constante en tu estructura
+          .doc("Productos_ID")                
           .collection(nombreSubcoleccion)
           .limit(1)
           .get();
@@ -92,7 +92,7 @@ router.post("/pedido-libre", async (req, res) => {
         const subDoc = subcolSnap.docs[0]; // Ejemplo: Clavo_1
 
         productosNormalizados.push({
-          productoId: "Productos_ID",        // ✅ constante
+          productoId: "Productos_ID",        // Constante
           subcoleccion: nombreSubcoleccion,  // Ej: "Clavo * 100"
           docId: subDoc.id,                  // Ej: "Clavo_1"
           cantidad,
@@ -102,7 +102,7 @@ router.post("/pedido-libre", async (req, res) => {
       }
     }
 
-    // ⚠️ Si ningún producto se encontró
+    // Si ningún producto se encontró
     if (productosNormalizados.length === 0) {
       return res.status(400).json({
         error: "ningun_producto_identificado",
@@ -117,10 +117,8 @@ router.post("/pedido-libre", async (req, res) => {
 
 
 
-
-
     // --------------------
-    // 🛒 Procesar productos
+    // Procesar productos
     // --------------------
     const items = [];
     let total = 0;
@@ -139,7 +137,7 @@ router.post("/pedido-libre", async (req, res) => {
         .collection(subcoleccion)
         .doc(docId);
 
-      const prodSnap = await prodRef.get();
+      const prodSnap = await prodRef.get(); // Traemos el producto
       if (!prodSnap.exists) {
         return res.status(400).json({
           error: `producto_no_encontrado: ${productoId}/${subcoleccion}/${docId}`,
@@ -181,25 +179,25 @@ router.post("/pedido-libre", async (req, res) => {
 
 
     // --------------------
-    // 📝 Crear pedido (Pedido_Id manual + estructura correcta)
+    // Crear pedido (Pedido_Id manual + estructura correcta)
     // --------------------
 
     const fecha = new Date();
 
     const mesAnio = fecha.toLocaleString("es-CO", {
       month: "long",
-      year: "numeric",
+      year: "numeric",   // Ej: abril de 2026
     });
 
     const mesAnioKey =
-      mesAnio.charAt(0).toUpperCase() + mesAnio.slice(1);
+      mesAnio.charAt(0).toUpperCase() + mesAnio.slice(1); // Ej: Abril de 2026
 
-    // 🧾 Descripción del pedido
+    // Descripción del pedido
     const descripcionPedido = items
       .map((it) => `${it.cantidad} ${it.nombre}`)
-      .join(", ");
+      .join(", ");  // Resulado: "2 Clavo * 100, 1 Canela * 50"
 
-    // 📍 Referencias Firestore 
+    // Referencias Firestore 
     const pedidosMesRef = db
       .collection("Ventas")
       .doc(clienteId)
@@ -219,24 +217,24 @@ router.post("/pedido-libre", async (req, res) => {
 
     const pedidosCollectionRef = pedidosMesRef.collection("pedidos");
 
-    // 🔢 Obtener pedidos existentes para calcular consecutivo
+    // Obtener pedidos existentes para calcular consecutivo
     const pedidosSnap = await pedidosCollectionRef.get();
 
     const numerosExistentes = pedidosSnap.docs
       .map((doc) => {
-        const match = doc.id.match(/^Pedido_Id(\d+)$/);
+        const match = doc.id.match(/^Pedido_Id(\d+)$/); // Regex extrae el numero: Producto_Id3 -> 3
         return match ? parseInt(match[1], 10) : null;
       })
       .filter((n) => n !== null);
 
     const nuevoNumero =
       numerosExistentes.length > 0
-        ? Math.max(...numerosExistentes) + 1
+        ? Math.max(...numerosExistentes) + 1 // Generamos consecutivo
         : 1;
 
     const pedidoId = `Pedido_Id${nuevoNumero}`;
 
-    // 🧾 Crear pedido con ID controlado
+    // Crear pedido con ID controlado
 
     await pedidosCollectionRef.doc(pedidoId).set({
       pedidoId,
@@ -254,12 +252,12 @@ router.post("/pedido-libre", async (req, res) => {
       tipoPedido: "libre",
       mensajeOriginal: mensaje,
     
-      // 🔐 CONTROL DE PAGO
+      // CONTROL DE PAGO
       pagado: false,                 // ← OBLIGATORIO
       fechaPago: null,               // ← Se llenará cuando pague
       pagadoPor: null,               // ← UID del admin que lo marque
     
-      // 📊 CONTROL CONTABLE
+      // CONTROL CONTABLE
       estadoContable: "pendiente",
       contabilidadAplicada: false,
     

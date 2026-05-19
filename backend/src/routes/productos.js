@@ -12,20 +12,21 @@ router.get("/", async (req, res) => {
     for (const productoDoc of productosSnap.docs) {
       const productoData = { id: productoDoc.id, subcolecciones: {} };
 
-      // Obtener todas las subcolecciones dinámicamente
+      // Obtenemos todas las subcolecciones dinamicamente
       const subcollections = await productoDoc.ref.listCollections();
       for (const subcol of subcollections) {
-        const subcolSnap = await subcol.get();
+        const subcolSnap = await subcol.get(); // Traermos todos los documentos de esa coleccion
         productoData.subcolecciones[subcol.id] = subcolSnap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
+          id: d.id,                        // Con .map transformamos los documentos en objetos planos
+          ...d.data(), // Expandemos los campos
         }));
       }
 
-      productos.push(productoData);
+      productos.push(productoData); // Vamos construyendo el resultado final
     }
 
     res.json(productos);
+    
   } catch (err) {
     console.error("Error obteniendo productos:", err);
     res.status(500).json({ error: "error_listando_productos" });

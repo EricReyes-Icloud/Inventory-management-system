@@ -1,5 +1,5 @@
-//------------------------------------------ INTURIS BRAIN -------------------------------------------//
-const Fuse = require("fuse.js");
+//-------------------------------------- INTURIS BRAIN ---------------------------------------//
+const Fuse = require("fuse.js"); // Librería Fuse.js para búsquedas aproximadas
 const { normalizarTexto } = require("../utils/normalizarTexto");
 
 // ----------------------
@@ -60,7 +60,7 @@ const productosOriginales = [
 // ----------------------
 const equivalencias = {
   // =====================
-  // 🌶️ AJÍ
+  //  AJÍ
   // =====================
   [normalizarTexto("aji 100")]: "Aji * 100",
   [normalizarTexto("aji grande")]: "Aji * 100",
@@ -71,14 +71,14 @@ const equivalencias = {
   [normalizarTexto("ajies grandes")]: "Aji * 100",
 
   // =====================
-  // 🧄 AJO EN POLVO
+  //  AJO EN POLVO
   // =====================
   [normalizarTexto("ajo en polvo")]: "Ajo en polvo * 50",
   [normalizarTexto("ajo polvo")]: "Ajo en polvo * 50",
   [normalizarTexto("ajo molido")]: "Ajo en polvo * 50",
 
   // =====================
-  // 🧂 BICARBONATO
+  //  BICARBONATO
   // =====================
   [normalizarTexto("bicarbonato 100")]: "Bicarbonato * 100",
   [normalizarTexto("bicarbonato grande")]: "Bicarbonato * 100",
@@ -86,7 +86,7 @@ const equivalencias = {
   [normalizarTexto("bicarbonato pequeño")]: "Bicarbonato * 50",
 
   // =====================
-  // 🌰 CANELA ENTERA
+  //  CANELA ENTERA
   // =====================
   [normalizarTexto("canela 100")]: "Canela * 100 pequeña",
   [normalizarTexto("canela grande")]: "Canela * 50 grande",
@@ -95,7 +95,7 @@ const equivalencias = {
   [normalizarTexto("canela en rama")]: "Canela * 50 mediana",
 
   // =====================
-  // 🌰 CANELA MOLIDA
+  //  CANELA MOLIDA
   // =====================
   [normalizarTexto("canela molida 50")]: "Canela molida * 50",
   [normalizarTexto("canela molida 100")]: "Canela molidad * 100",
@@ -103,7 +103,7 @@ const equivalencias = {
   [normalizarTexto("canela molida")]: "Canela molida * 50",
 
   // =====================
-  // 🌸 CLAVO
+  //  CLAVO
   // =====================
   [normalizarTexto("clavo")]: "Clavo * 100",
   [normalizarTexto("clavos")]: "Clavo * 100",
@@ -115,25 +115,25 @@ const equivalencias = {
   [normalizarTexto("clavos de 50")]: "Clavo * 50",
 
   // =====================
-  // 🥥 COCO
+  //  COCO
   // =====================
   [normalizarTexto("coco")]: "Coco * 30",
   [normalizarTexto("coco pequeño")]: "Coco * 30",
 
   // =====================
-  // 🎨 COLOR
+  //  COLOR
   // =====================
   [normalizarTexto("color")]: "Color * 50",
   [normalizarTexto("color pequeño")]: "Color * 50",
 
   // =====================
-  // 🌿 COMINO
+  //  COMINO
   // =====================
   [normalizarTexto("comino")]: "Comino * 50",
   [normalizarTexto("comino pequeño")]: "Comino * 50",
 
   // =====================
-  // 🍯 MIEL
+  //  MIEL
   // =====================
   [normalizarTexto("miel")]: "Miel * 100",
   [normalizarTexto("miel grande")]: "Miel * 100",
@@ -149,13 +149,13 @@ const equivalencias = {
   [normalizarTexto("miel jumbo")]: "Miel jumbo * 50",
 
   // =====================
-  // 🧂 SALSINA
+  //  SALSINA
   // =====================
   [normalizarTexto("salsina")]: "Salsina * 50",
   [normalizarTexto("salsina pequeña")]: "Salsina * 50",
 
   // =====================
-  // 🍇 UVA
+  //  UVA
   // =====================
   [normalizarTexto("uva")]: "Uva * 30",
   [normalizarTexto("uva pequeña")]: "Uva * 30"
@@ -245,15 +245,15 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
   console.log("De:", from);
   console.log("Texto:", body);
 
-  // 1️⃣ Interpretar el pedido
+  // Interpretar el pedido
   const resultado = interpretarPedido(body);
   console.log("🧠 Interpretación del mensaje:", JSON.stringify(resultado, null, 2));
 
-  // 2️⃣ Determinar el cliente
+  // Determinar el cliente
   const cliente = clienteDetectado || "Desconocido";
   const mensaje = body;
 
-  // 3️⃣ Enviar pedido a /pedido-libre (ventas.js)
+  // Enviar pedido a /pedido-libre (ventas.js)
   try {
     const response = await axios.post("http://localhost:4000/api/ventas/pedido-libre", {
       cliente,
@@ -265,7 +265,7 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
     console.error("❌ Error enviando pedido a /api/ventas/pedido-libre:", error.response?.data || error.message);
   }
 
-  // 4️⃣ Retornar información útil (por si el webhook la usa)
+  // Retornar información útil (por si el webhook la usa)
   return { cliente, resultado };
 }
 
