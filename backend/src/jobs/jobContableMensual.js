@@ -12,7 +12,7 @@ async function jobContableMensual() {
   }
 
   let pedidosProcesados = 0;
-  let pedidosFallidos = 0;ñ
+  let pedidosFallidos = 0;
 
   for (const clienteDoc of clientesSnap.docs) {
     const clienteId = clienteDoc.id;

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const admin = require("firebase-admin");
+const admin = require("firebase-admin"); // SDK de Firebase Admin
 const db = require("../lib/firestore");
 
 const { 
@@ -8,41 +8,44 @@ const {
 } = require("../services/cierreMensual.service");
 
 /**
- * 🔐 Validacion admin 
+ *  Validacion admin 
 **/
+
+// Definimos un middleware
 
 async function adminAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) { // Validamos formato correcto
       return res.status(401).json({
         ok: false,
         message: "Token no proporcionado",
       });
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.split(" ")[1]; // Extraemos el Token con posicion [1]
 
-    // 🔐 Verificar token Firebase
+    // Verificar token Firebase
     const decodedToken = await admin.auth().verifyIdToken(token);
 
-    const email = decodedToken.email;
+    const email = decodedToken.email; // Extraemos el email del usuario
 
     if (!email) {
-      return res.status(403).json({
+      return res.status(403).json({ // Autenticado pero no autorizado correctamente
         ok: false,
         message: "Token inválido (sin email)",
       });
     }
 
-    // 🔎 Buscar en colección Admin
+    /* Buscar en colección Admin 
+       No confiamos solo en el Token, tambien buscamos en nuestra DB*/
     const adminSnap = await db
       .collection("Admin")
       .where("Email", "==", email)
       .where("Activo", "==", true)
       .where("Rol", "==", "admin")
-      .limit(1)
+      .limit(1) // Limitamos a un solo resultado
       .get();
 
     if (adminSnap.empty) {
@@ -73,7 +76,7 @@ async function adminAuth(req, res, next) {
 
 
 /**
- * 🔒 POST /admin/contabilidad/cerrar-mes
+ * POST /admin/contabilidad/cerrar-mes
  * Body:
  * {
  *   "mesAnio": "Febrero de 2026"
