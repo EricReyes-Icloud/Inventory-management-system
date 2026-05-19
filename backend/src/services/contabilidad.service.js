@@ -2,27 +2,25 @@
 const db = require("../lib/firestore"); // Solo la usamos en el Historico Mensual
 const { diccionarioCategorias } = require("../utils/diccionario.js");
 const { obtenerMesAnio } = require("../utils/fechas.js");
-const { FieldValue } = require("firebase-admin/firestore");// Para operaciones especiales como increment() y serverTimestamp()
+const { FieldValue } = require("firebase-admin/firestore");
 const { normalizarTexto } = require("../utils/normalizarTexto.js");
 
 
-function obtenerCategoria(nombre) {
-  const skuNormalizado = normalizarTexto(nombre); // Limpiamos el nombre del producto
 
-  const categoriasOrdenadas = Object.keys(diccionarioCategorias) // Obtenemos todas las categorias
-    .sort((a, b) => { // Las ordenamos 
-      const aNorm = normalizarTexto(a.replace(/_/g, " ")); // Limpiamos nombres de categorias
+  const categoriasOrdenadas = Object.keys(diccionarioCategorias)
+    .sort((a, b) => {
+      const aNorm = normalizarTexto(a.replace(/_/g, " "));
       const bNorm = normalizarTexto(b.replace(/_/g, " "));
-      return bNorm.length - aNorm.length; // Devolvemos de mayor a menor
+      return bNorm.length - aNorm.length;
     });
 
-  for (const categoria of categoriasOrdenadas) { // Iteramos cada categoria
-    const categoriaNormalizada = normalizarTexto( // Limpiamos la categoria
+  for (const categoria of categoriasOrdenadas) {
+    const categoriaNormalizada = normalizarTexto(
       categoria.replace(/_/g, " ")
     );
 
-    if (skuNormalizado.includes(categoriaNormalizada)) { // Validamos si el producto contiene la categoria
-      return categoria; // Devolvemos la categoria encontrada
+    if (skuNormalizado.includes(categoriaNormalizada)) {
+      return categoria;
     }
   }
 
