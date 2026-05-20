@@ -18,10 +18,10 @@ Inventory Management System es una aplicación web diseñada para digitalizar y 
 
 El proyecto nace a partir de una necesidad real de la empresa, la cual realizaba sus procesos manualmente, generando:
 
-- Pérdida de tiempo
-- Errores de inventario
-- Dificultad para calcular ganancias
-- Baja trazabilidad de ventas
+- Pérdida de tiempo.
+- Errores de inventario.
+- Dificultad para calcular ganancias.
+- Baja trazabilidad de ventas.
 
 El sistema busca resolver estos problemas mediante automatización, centralización de datos y procesamiento inteligente de operaciones.
 
@@ -31,17 +31,17 @@ El sistema busca resolver estos problemas mediante automatización, centralizaci
 
 La empresa aún maneja:
 
-- Inventarios manuales
-- Registros físicos
-- Control deficiente de productos y ventas
+- Inventarios manuales.
+- Registros físicos.
+- Control deficiente de productos y ventas.
 
 Esto genera:
 
-- Inconsistencias de stock
-- Errores humanos
-- Pérdida de información
-- Poca escalabilidad
-- Baja capacidad de análisis financiero
+- Inconsistencias de stock.
+- Errores humanos.
+- Pérdida de información.
+- Poca escalabilidad.
+- Baja capacidad de análisis financiero.
 
 Inventory Management System transforma estos procesos en un flujo digital centralizado y automatizado.
 
@@ -90,13 +90,13 @@ Firebase Firestore
 
 ### Principios utilizados
 
-- Modular Architecture
-- Separation of Concerns
-- Service Layer Pattern
-- Scalable Folder Structure
-- Reusable Business Logic
-- Centralized Validation
-- Automated Processing Flows
+- Modular Architecture.
+- Separation of Concerns.
+- Service Layer Pattern.
+- Scalable Folder Structure.
+- Reusable Business Logic.
+- Centralized Validation.
+- Automated Processing Flows.
 
 ---
 
@@ -110,7 +110,7 @@ inventory-management-system/
 |    │
 |    ├── services/               # Logica de negocio
 |    ├── routes/                 # Rutas de la API
-|    ├── utils/                  # Utilidaddes compartidas
+|    ├── utils/                  # Utilidades compartidas
 |    ├── tests/                  # Tests automatizados
 |
 ├── docs/                   # Documentación tecnica
@@ -126,10 +126,10 @@ El proyecto incluye testing automatizado para validar reglas de negocio crítica
 
 ### Cobertura actual
 
-- Procesamiento contable
-- Validaciones de pedidos
-- Reglas de inventario
-- Casos límite operativos
+- Procesamiento contable.
+- Validaciones de pedidos.
+- Reglas de inventario.
+- Casos límite operativos.
 
 ### Tecnología
 
@@ -162,11 +162,11 @@ Este proyecto incorpora integración estratégica de inteligencia artificial com
 
 ### Uso de IA en el proyecto
 
-- Arquitectura asistida por IA
-- Automatización de testing
-- Generación de documentación técnica
-- Soporte para agentes IA mediante `agent.md`
-- Integración profesional con OpenCode
+- Arquitectura asistida por IA.
+- Automatización de testing.
+- Generación de documentación técnica.
+- Soporte para agentes IA mediante `AGENTS.md`.
+- Integración profesional con OpenCode.
 
 ### Filosofía
 
@@ -182,11 +182,10 @@ Este proyecto no busca únicamente "funcionar".
 
 Está diseñado para:
 
-- Aplicar buenas prácticas reales
-- Construir arquitectura mantenible
-- Implementar automatización inteligente
-- Desarrollar habilidades de ingeniería profesional
-- Demostrar capacidad de dirección técnica utilizando IA
+- Aplicar buenas prácticas reales.
+- Construir arquitectura mantenible.
+- Implementar automatización inteligente.
+- Desarrollar habilidades de software profesional.
 
 El enfoque principal es crear un sistema escalable, entendible y alineado con prácticas modernas de desarrollo de software.
 
@@ -194,15 +193,15 @@ El enfoque principal es crear un sistema escalable, entendible y alineado con pr
 
 ## Estado del proyecto
 
-En desarrollo activo
+En desarrollo activo.
 
 Actualmente el proyecto continúa evolucionando en:
 
-- Arquitectura
-- Testing
-- Automatización
-- Integración IA
-- Experiencia de usuario
+- Arquitectura.
+- Testing.
+- Automatización.
+- Integración con IA.
+- Experiencia de usuario.
 
 ---
 
