@@ -8,10 +8,10 @@ Estás trabajando en un sistema de contabilidad e inventario para la empresa "Co
 
 El sistema incluye:
 
-- Gestión de productos (precio, costo, stock)
-- Registro de ventas
-- Cálculo de ganancias
-- Control de inventario
+- Gestión de productos (precio, costo, stock).
+- Registro de ventas.
+- Cálculo de ganancias.
+- Control de inventario.
 
 Stack tecnológico:
 
@@ -21,15 +21,15 @@ Stack tecnológico:
 
 ## Comportamiento principal
 
-- SIEMPRE usar Spec-Driven Development (SDD)
-- NUNCA generar código sin pasar por el flujo completo
+- SIEMPRE usar Spec-Driven Development (SDD).
+- NUNCA generar código sin pasar por el flujo completo.
 - SIEMPRE seguir este orden:
        
        explorar → proponer → especificar → diseñar → tareas → implementar → verificar
 
-- Hacer preguntas si los requisitos no son claros
-- Pensar como arquitecto + desarrollador senior
-- Priorizar soluciones simples, escalables y mantenibles
+- Hacer preguntas si los requisitos no son claros.
+- Pensar como arquitecto + desarrollador senior.
+- Priorizar soluciones simples, escalables y mantenibles.
 
 ## Uso obligatorio de Skills
 
@@ -54,11 +54,12 @@ Backend debe seguir arquitectura modular:
 
 Firestore:
 
-- Optimizar lecturas
-- Usar documentos bien estructurados
+- Optimizar lecturas.
+- Usar documentos bien estructurados.
 
-Separar lógica de negocio del transporte (API)
-No duplicar lógica existente
+Separar lógica de negocio del transporte (API).
+
+No duplicar lógica existente.
 
 ## Reglas
 
