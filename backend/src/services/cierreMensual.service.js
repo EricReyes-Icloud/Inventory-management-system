@@ -1,9 +1,9 @@
-const db = require("../lib/firestore");
+const contabilidadRepo = require("../repositories/contabilidad.repository");
 
 /**
  * 🔒 Cierra un mes contable
  * - Genera Historico_Mensual
- * - Solo debe llamarse desde un endpoint ADMIN 
+ * - Solo debe llamarse desde un endpoint ADMIN
  */
 async function cerrarMesContable(mesAnio) {
   if (!mesAnio) {
@@ -12,15 +12,11 @@ async function cerrarMesContable(mesAnio) {
 
   console.log(`🔒 Iniciando cierre contable del mes: ${mesAnio}`);
 
-  const totalRef = db.collection("Total Productos").doc(mesAnio);
-  const cartonesRef = db.collection("Cartones_vendidos").doc(mesAnio);
-  const historicoRef = db.collection("Historico_Mensual").doc(mesAnio);
-
   // --------------------
   // 🛑 Validar que NO esté cerrado
   // --------------------
-  const historicoSnap = await historicoRef.get();
-  if (historicoSnap.exists) {
+  const historicoSnap = await contabilidadRepo.getHistoricoMensual(mesAnio);
+  if (historicoSnap) {
     throw new Error(`El mes ${mesAnio} ya está cerrado`);
   }
 
@@ -28,28 +24,23 @@ async function cerrarMesContable(mesAnio) {
   // 📊 Leer acumuladores
   // --------------------
   const [totalSnap, cartonesSnap] = await Promise.all([
-    totalRef.get(),
-    cartonesRef.get(),
+    contabilidadRepo.getTotalProductos(mesAnio),
+    contabilidadRepo.getCartonesVendidos(mesAnio),
   ]);
 
-  if (!totalSnap.exists && !cartonesSnap.exists) {
+  if (!totalSnap && !cartonesSnap) {
     throw new Error(`No hay datos contables para ${mesAnio}`);
   }
 
-  const totalProductos = totalSnap.exists ? totalSnap.data() : {};
-  const cartonesVendidos = cartonesSnap.exists
-    ? cartonesSnap.data()
-    : {};
+  const totalProductos = totalSnap ? totalSnap.data() : {};
+  const cartonesVendidos = cartonesSnap ? cartonesSnap.data() : {};
 
   // --------------------
   // 🧾 Crear histórico (snapshot)
   // --------------------
-  await historicoRef.set({
-    mesAnio,
+  await contabilidadRepo.setHistoricoMensual(mesAnio, {
     totalProductos,
     cartonesVendidos,
-    estado: "cerrado",
-    generadoEn: new Date(),
   });
 
   console.log(`📦 Histórico mensual creado: ${mesAnio}`);

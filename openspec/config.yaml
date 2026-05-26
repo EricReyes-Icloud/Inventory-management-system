@@ -1,0 +1,31 @@
+# OpenSpec Configuration — Inventory-management-system
+schema: spec-driven
+
+context: |
+  Tech stack: Node.js 18+ + Express 5 + Firebase Firestore
+  Architecture: Modular (routes/, services/, jobs/)
+  Testing: Vitest v4.1.2 con estrategia Module._cache para mocks CJS
+  Style: CommonJS (Node.js require)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    tdd: true
+    test_command: "npm run test:run"
+  verify:
+    test_command: "npm run test:run"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
