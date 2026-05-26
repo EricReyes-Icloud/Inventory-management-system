@@ -1,5 +1,5 @@
-#  Modelo de Datos
-Condimentos El Colibrí - Inventory Management System
+##  Modelo de Datos
+Inventory Management System
 
 ---
 
@@ -11,7 +11,7 @@ El modelo está diseñado bajo principios de:
 
 - Simplicidad
 - Escalabilidad
-- Lecturas eficientes
+- Lecturas eficientes 
 - Denormalización controlada
 
 No se utiliza un modelo relacional tradicional.
@@ -21,13 +21,14 @@ Las relaciones se manejan mediante referencias por ID.
 
 ## 2. Colecciones Principales
 
-### productos
+### Productos
 
 Ruta:
 Productos/{Productos_ID}
 
 Estructura:
 
+```json
 {
   Nombre_producto/NombreID: [
     { 
@@ -38,14 +39,16 @@ Estructura:
     }
   ] 
 }
+```
 
 ---
 
-### ventas
+### Ventas
 
 Ruta:
 Ventas/{clienteId}
 
+```json
 {
   Pedidos/MesAnio/pedidos/Pedido_IdX: [
     {
@@ -70,6 +73,7 @@ Ventas/{clienteId}
   clienteId: string,
   clienteNombre: stirng
 }
+```
 
 Nota:
 Se almacenan datos duplicados del producto (nombre, Id, precio)
@@ -78,11 +82,12 @@ para evitar lecturas adicionales al momento de consultar ventas históricas.
 ---
 
 
-### usuarios
+### Usuarios
 
 Ruta:
 Usuarios/{UsuarioId}
 
+```json
 {
   activo: boolean,
   email: string,
@@ -90,6 +95,7 @@ Usuarios/{UsuarioId}
   nombre: string,
   rol: "admin" | "operador",
 }
+```
 
 ---
 
@@ -131,4 +137,4 @@ El diseño permite:
 
 ## 6. Diagrama del modelo de datos
 
-![Modelo de datos](./images/Modelo%20de%20datos.png)
+![Modelo de datos](../images/Modelo%20de%20datos.png)
