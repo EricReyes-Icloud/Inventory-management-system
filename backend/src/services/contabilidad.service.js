@@ -161,7 +161,8 @@ async function generarHistoricoMensual(mesAnio) {
   const totalProductos = {};
   const cartonesVendidos = {};
 
-  const productosSnap = await totalMesRef.collection("productos").get();
+  // Leer categorías y SKUs de Total Productos
+  const productosSnap = await contabilidadRepo.getCategoriasTotalProductos(mesAnio);
 
   for (const productoDoc of productosSnap.docs) {
     const categoria = productoDoc.id;
@@ -171,7 +172,7 @@ async function generarHistoricoMensual(mesAnio) {
       skus: {}
     };
 
-    const skusSnap = await productoDoc.ref.collection("skus").get();
+    const skusSnap = await contabilidadRepo.getSkusTotalProductos(mesAnio, categoria);
 
     for (const skuDoc of skusSnap.docs) {
       totalProductos[categoria].skus[skuDoc.id] =
@@ -179,8 +180,9 @@ async function generarHistoricoMensual(mesAnio) {
     }
   }
 
+  // Leer categorías y SKUs de Cartones Vendidos
   const productosCartonesSnap =
-    await cartonesMesRef.collection("productos").get();
+    await contabilidadRepo.getCategoriasCartonesVendidos(mesAnio);
 
   for (const productoDoc of productosCartonesSnap.docs) {
     const categoria = productoDoc.id;
@@ -190,7 +192,7 @@ async function generarHistoricoMensual(mesAnio) {
       skus: {}
     };
 
-    const skusSnap = await productoDoc.ref.collection("skus").get();
+    const skusSnap = await contabilidadRepo.getSkusCartonesVendidos(mesAnio, categoria);
 
     for (const skuDoc of skusSnap.docs) {
       cartonesVendidos[categoria].skus[skuDoc.id] =
@@ -198,19 +200,17 @@ async function generarHistoricoMensual(mesAnio) {
     }
   }
 
-  await historicoRef.set({
-    mesAnio,
+  // Guardar snapshot histórico
+  await contabilidadRepo.setHistoricoMensual(mesAnio, {
     totalProductos,
     cartonesVendidos,
-    generadoEn: new Date(),
-    estado: "cerrado",
   });
 }
 
 /* ================= EXPORTS ================= */
 
 module.exports = {
-  calcularOperacionesTotalesYCartones,
   generarHistoricoMensual,
-  obtenerCategoria
+  obtenerCategoria: contabilidadRepo.obtenerCategoria,
+  buildOperacionesContables: contabilidadRepo.buildOperacionesContables,
 };

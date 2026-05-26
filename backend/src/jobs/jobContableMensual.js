@@ -1,5 +1,5 @@
 const db = require("../lib/firestore");
-const { calcularOperacionesTotalesYCartones } = require("../services/contabilidad.service");
+const contabilidadRepo = require("../repositories/contabilidad.repository");
 
 async function jobContableMensual() {
   console.log("🔄 Iniciando Job Contable");
@@ -71,14 +71,13 @@ async function jobContableMensual() {
           continue;
         }
 
-	// 🔎 Validar detalle
+        // 🔎 Validar detalle
         if (!Array.isArray(pedido.detalle) || pedido.detalle.length === 0) {
           console.warn(`⚠️ Pedido ${pedidoDoc.id} sin detalles`);
           continue;
         }
 
-	
-	// 📅 Validar fecha
+        // 📅 Validar fecha
         const fechaPedido =
           pedido.fechaPedido?.toDate?.() ?? pedido.fechaPedido;
 
@@ -92,16 +91,16 @@ async function jobContableMensual() {
         );
 
         try {
-          // 🧠 1. Calcular operaciones
-          const operaciones = calcularOperacionesTotalesYCartones(
+          // 🧠 1. Calcular operaciones contables (usando el repositorio)
+          const operaciones = contabilidadRepo.buildOperacionesContables(
             pedido.detalle,
             fechaPedido
           );
 
-          // 🧱 2. Crear batch
+          // 🧱 2. Crear batch atómico
           const batch = db.batch();
 
-          // 🔁 3. Aplicar operaciones
+          // 🔁 3. Aplicar operaciones contables
           for (const op of operaciones) {
             const ref = db.doc(op.ref);
             batch.set(ref, op.data, op.options);
@@ -126,8 +125,6 @@ async function jobContableMensual() {
             `❌ Error procesando pedido ${pedidoDoc.id} | Cliente: ${clienteId} | Mes: ${mesAnio}`
           );
           console.error("🧨 Detalle:", error.message);
-
-          // ⚠️ No se marca como procesado → se reintentará en el siguiente job
         }
       }
     }

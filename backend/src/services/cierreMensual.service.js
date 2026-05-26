@@ -4,7 +4,7 @@ const db = require("../lib/firestore");
 /**
  * 🔒 Cierra un mes contable
  * - Genera Historico_Mensual
- * - Solo debe llamarse desde un endpoint ADMIN 
+ * - Solo debe llamarse desde un endpoint ADMIN
  */
 async function cerrarMesContable(mesAnio) {
   if (!mesAnio) {
@@ -50,8 +50,7 @@ async function cerrarMesContable(mesAnio) {
   // --------------------
   // Crear histórico (snapshot)
   // --------------------
-  await historicoRef.set({
-    mesAnio,
+  await contabilidadRepo.setHistoricoMensual(mesAnio, {
     totalProductos,
     cartonesVendidos,           // Mantenemos inmutabilidad historica
     estado: "cerrado",
