@@ -1,10 +1,11 @@
 const db = require("../lib/firestore");
 const contabilidadRepo = require("../repositories/contabilidad.repository");
+const ventasRepo = require("../repositories/ventas.repository");
 
 async function jobContableMensual() {
   console.log("🔄 Iniciando Job Contable");
 
-  const clientesSnap = await db.collection("Ventas").get();
+  const clientesSnap = await ventasRepo.getTodosClientesConVentas();
 
   if (clientesSnap.empty) {
     console.log("ℹ️ No hay clientes con ventas");
@@ -19,12 +20,7 @@ async function jobContableMensual() {
 
     console.log(`👤 Cliente: ${clienteId}`);
 
-    const pedidosRootRef = db
-      .collection("Ventas")
-      .doc(clienteId)
-      .collection("Pedidos");
-
-    const mesesSnap = await pedidosRootRef.get();
+    const mesesSnap = await ventasRepo.getMesesPedidos(clienteId);
 
     console.log(
       `📂 Rutas encontradas para ${clienteId}:`,
@@ -41,13 +37,7 @@ async function jobContableMensual() {
 
       console.log(`📅 Mes: ${mesAnio}`);
 
-      const pedidosCollectionRef = pedidosRootRef
-        .doc(mesAnio)
-        .collection("pedidos");
-
-      const pedidosSnap = await pedidosCollectionRef
-        .where("estadoContable", "==", "pendiente")
-        .get();
+      const pedidosSnap = await ventasRepo.getPedidosPendientes(clienteId, mesAnio);
 
       console.log(
         `📦 ${clienteId} | ${mesAnio} → pedidos pendientes: ${pedidosSnap.size}`

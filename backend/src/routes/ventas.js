@@ -1,16 +1,23 @@
 // src/routes/ventas.js
 const express = require("express");
-const db = require("../lib/firestore");
 const router = express.Router();
-const admin = require("firebase-admin");
 const { interpretarPedido } = require("../brain/inturis");
-
-
-
+const ventasRepo = require("../repositories/ventas.repository");
+const productosRepo = require("../repositories/productos.repository");
 
 /**
---------------------------👉 Endpoint para registrar pedido libre-----------------------
-*/
+ * Normaliza texto: lower case + quita tildes.
+ */
+function normalizar(texto) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * --------------------------👉 Endpoint para registrar pedido libre-----------------------
+ */
 router.post("/pedido-libre", async (req, res) => {
   try {
     const { cliente, mensaje } = req.body;
@@ -22,37 +29,15 @@ router.post("/pedido-libre", async (req, res) => {
       return res.status(400).json({ error: "mensaje_requerido" });
     }
 
-  // ✅ Buscar cliente en Firestore (ignorando mayúsculas y tildes)
-  const normalizar = (texto) =>
-    texto
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, ""); // quita tildes
+    // ✅ Buscar cliente en Firestore (ignorando mayúsculas y tildes)
+    const clienteNormalizado = normalizar(cliente);
+    const clienteDoc = await ventasRepo.buscarClientePorNombre(clienteNormalizado);
 
-      const clienteNormalizado = normalizar(cliente);
-
-      const clientesSnap = await db.collection("Clientes").get();
-
-      let clienteDoc = null;
-
-      clientesSnap.forEach((doc) => {
-        const nombreBD = doc.data().Nombre || "";
-        if (normalizar(nombreBD) === clienteNormalizado) {
-          clienteDoc = doc;
-        }
-      });
-
-      if (!clienteDoc) {
-        return res.status(404).json({ error: `cliente_no_encontrado: ${cliente}` });
-      }
+    if (!clienteDoc) {
+      return res.status(404).json({ error: `cliente_no_encontrado: ${cliente}` });
+    }
 
     const clienteId = clienteDoc.id;
-
-
-
-
-
-
 
     // --------------------
     // 🧠 Interpretar pedido libre
@@ -62,7 +47,7 @@ router.post("/pedido-libre", async (req, res) => {
     if (!productosInterpretados || productosInterpretados.length === 0) {
       return res.status(400).json({
         error: "ningun_producto_identificado",
-        sugerencias: Object.values(diccionarioCategorias).flat(),
+        sugerencias: Object.values(require("../utils/diccionario").diccionarioCategorias).flat(),
       });
     }
 
@@ -76,25 +61,17 @@ router.post("/pedido-libre", async (req, res) => {
       const cantidad = p.cantidad || 1;
 
       try {
-        // Buscar el primer documento dentro de la subcolección del producto
-        const subcolSnap = await db
-          .collection("Productos")
-          .doc("Productos_ID")                // 🔥 constante en tu estructura
-          .collection(nombreSubcoleccion)
-          .limit(1)
-          .get();
+        const subDoc = await productosRepo.buscarSubcoleccion(nombreSubcoleccion);
 
-        if (subcolSnap.empty) {
+        if (!subDoc) {
           console.warn(`⚠️ No se encontró la subcolección: ${nombreSubcoleccion}`);
           continue;
         }
 
-        const subDoc = subcolSnap.docs[0]; // Ejemplo: Clavo_1
-
         productosNormalizados.push({
-          productoId: "Productos_ID",        // ✅ constante
-          subcoleccion: nombreSubcoleccion,  // Ej: "Clavo * 100"
-          docId: subDoc.id,                  // Ej: "Clavo_1"
+          productoId: "Productos_ID",
+          subcoleccion: nombreSubcoleccion,
+          docId: subDoc.id,
           cantidad,
         });
       } catch (error) {
@@ -112,13 +89,6 @@ router.post("/pedido-libre", async (req, res) => {
 
     console.log("🧩 Productos normalizados:", productosNormalizados);
 
-
-
-
-
-
-
-
     // --------------------
     // 🛒 Procesar productos
     // --------------------
@@ -133,14 +103,8 @@ router.post("/pedido-libre", async (req, res) => {
         });
       }
 
-      const prodRef = db
-        .collection("Productos")
-        .doc(productoId)
-        .collection(subcoleccion)
-        .doc(docId);
-
-      const prodSnap = await prodRef.get();
-      if (!prodSnap.exists) {
+      const prodSnap = await productosRepo.getProducto(subcoleccion, docId);
+      if (!prodSnap) {
         return res.status(400).json({
           error: `producto_no_encontrado: ${productoId}/${subcoleccion}/${docId}`,
         });
@@ -164,63 +128,37 @@ router.post("/pedido-libre", async (req, res) => {
       total += subtotal;
     }
 
-
-
-    const clienteRef = db.collection("Ventas").doc(clienteId);
-
-    await clienteRef.set(
-      {
-        clienteId,
-        clienteNombre: cliente,
-        actualizadoEn: new Date(),
-      },
-      { merge: true }
-    );
-
-
-
+    // 📝 Crear/actualizar documento Venta del cliente
+    await ventasRepo.setVenta(clienteId, {
+      clienteId,
+      clienteNombre: cliente,
+      actualizadoEn: new Date(),
+    });
 
     // --------------------
     // 📝 Crear pedido (Pedido_Id manual + estructura correcta)
     // --------------------
-
     const fecha = new Date();
-
     const mesAnio = fecha.toLocaleString("es-CO", {
       month: "long",
       year: "numeric",
     });
-
-    const mesAnioKey =
-      mesAnio.charAt(0).toUpperCase() + mesAnio.slice(1);
+    const mesAnioKey = mesAnio.charAt(0).toUpperCase() + mesAnio.slice(1);
 
     // 🧾 Descripción del pedido
     const descripcionPedido = items
       .map((it) => `${it.cantidad} ${it.nombre}`)
       .join(", ");
 
-    // 📍 Referencias Firestore 
-    const pedidosMesRef = db
-      .collection("Ventas")
-      .doc(clienteId)
-      .collection("Pedidos")
-      .doc(mesAnioKey);
-
-      await pedidosMesRef.set(
-        {
-          mes: mesAnioKey,
-          clienteId,
-          creadoEn: new Date(),
-        },
-        { merge: true }
-      );      
-
-
-
-    const pedidosCollectionRef = pedidosMesRef.collection("pedidos");
+    // 📍 Crear documento del mes de pedidos
+    await ventasRepo.setPedidoMes(clienteId, mesAnioKey, {
+      mes: mesAnioKey,
+      clienteId,
+      creadoEn: new Date(),
+    });
 
     // 🔢 Obtener pedidos existentes para calcular consecutivo
-    const pedidosSnap = await pedidosCollectionRef.get();
+    const pedidosSnap = await ventasRepo.getPedidos(clienteId, mesAnioKey);
 
     const numerosExistentes = pedidosSnap.docs
       .map((doc) => {
@@ -237,72 +175,50 @@ router.post("/pedido-libre", async (req, res) => {
     const pedidoId = `Pedido_Id${nuevoNumero}`;
 
     // 🧾 Crear pedido con ID controlado
-
-    await pedidosCollectionRef.doc(pedidoId).set({
+    await ventasRepo.crearPedido(clienteId, mesAnioKey, pedidoId, {
       pedidoId,
       numeroPedido: nuevoNumero,
-    
       descripcion: `Pedido N°${nuevoNumero}: ${descripcionPedido}`,
       fechaPedido: fecha,
-    
       subtotal: total,
       detalle: items,
-    
       clienteNombre: cliente,
       clienteId,
-    
       tipoPedido: "libre",
       mensajeOriginal: mensaje,
-    
       // 🔐 CONTROL DE PAGO
-      pagado: false,                 // ← OBLIGATORIO
-      fechaPago: null,               // ← Se llenará cuando pague
-      pagadoPor: null,               // ← UID del admin que lo marque
-    
+      pagado: false,
+      fechaPago: null,
+      pagadoPor: null,
       // 📊 CONTROL CONTABLE
       estadoContable: "pendiente",
       contabilidadAplicada: false,
-    
       creadoEn: new Date(),
     });
 
-    
-
-
-
-
-  
-
     res.json({
-        pedidoId,
-        clienteId,
-        clienteNombre: cliente,
-        descripcionPedido: `Pedido N°${nuevoNumero}: ${descripcionPedido}`,
-        total,
-        tipoPedido: "libre",
-        estadoContable: "pendiente",
-      });
-        
-      } catch (err) {
-        console.error("Error creando pedido libre:", err);
-        res
-          .status(500)
-          .json({ error: "error_creando_pedido_libre", details: err.message });
-      }
+      pedidoId,
+      clienteId,
+      clienteNombre: cliente,
+      descripcionPedido: `Pedido N°${nuevoNumero}: ${descripcionPedido}`,
+      total,
+      tipoPedido: "libre",
+      estadoContable: "pendiente",
     });
-
-
-
-
-
-
-
+  } catch (err) {
+    console.error("Error creando pedido libre:", err);
+    res
+      .status(500)
+      .json({ error: "error_creando_pedido_libre", details: err.message });
+  }
+});
 
 /**
  * 👉 Endpoint para recalcular ganancias manualmente
  */
 router.post("/calcular-ganancias", async (req, res) => {
   try {
+    const { calcularGananciasInterno } = require("../services/ganancias.service");
     const resultado = await calcularGananciasInterno();
     if (!resultado) {
       return res.status(404).json({ error: "no_existen_totales" });
@@ -313,10 +229,5 @@ router.post("/calcular-ganancias", async (req, res) => {
     res.status(500).json({ error: "error_calculando_ganancias", details: err.message });
   }
 });
-
-
-
-
-
 
 module.exports = router;
