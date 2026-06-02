@@ -1,5 +1,6 @@
 // services/admin.actions.service.js
-const db = require("../lib/firestore");
+const contabilidadRepo = require("../repositories/contabilidad.repository");
+const adminRepo = require("../repositories/admin.repository");
 const { cerrarGananciasPorCategoria } = require("./ganancias.service");
 
 /**
@@ -23,23 +24,8 @@ async function cerrarCategoria({
   console.log(`🔒 Iniciando cierre administrativo: ${categoria} (${mesAnio})`);
 
   // ======================
-  // REFERENCIAS
+  // 1️⃣ LECTURA EN PARALELO
   // ======================
-
-  const totalMesRef = db.collection("Total Productos").doc(mesAnio);
-  const cartonesMesRef = db.collection("Cartones_vendidos").doc(mesAnio);
-
-  const categoriaTotalRef = totalMesRef
-    .collection("productos")
-    .doc(categoria);
-
-  const categoriaCartonesRef = cartonesMesRef
-    .collection("productos")
-    .doc(categoria);
-
-  const invertirRef = db.collection("Invertir").doc(categoria);
-
-  // Lectura en paralelo con Promise.all
 
   const [
     totalMesSnap,
@@ -48,40 +34,38 @@ async function cerrarCategoria({
     categoriaCartonesSnap,
     invertirSnap,
   ] = await Promise.all([
-    totalMesRef.get(),
-    cartonesMesRef.get(),
-    categoriaTotalRef.get(),
-    categoriaCartonesRef.get(),
-    invertirRef.get(),
+    contabilidadRepo.getTotalProductos(mesAnio),
+    contabilidadRepo.getCartonesVendidos(mesAnio),
+    contabilidadRepo.getCategoriaTotal(mesAnio, categoria),
+    contabilidadRepo.getCategoriaCartones(mesAnio, categoria),
+    adminRepo.getInversion(categoria),
   ]);
 
   // ======================
-  // VALIDACIONES
+  // 2️⃣ VALIDACIONES
   // ======================
 
-  if (!totalMesSnap.exists) {
+  if (!totalMesSnap) {
     throw new Error(`No existe Total Productos para ${mesAnio}`);
   }
 
-  // Evitamos calculos corruptos
-
-  if (!cartonesMesSnap.exists) {
+  if (!cartonesMesSnap) {
     throw new Error(`No existe Cartones_vendidos para ${mesAnio}`);
   }
 
-  if (!invertirSnap.exists) {
+  if (!invertirSnap) {
     throw new Error(`No existe inversión registrada para ${categoria}`);
   }
 
-  if (!categoriaTotalSnap.exists) {
+  if (!categoriaTotalSnap) {
     throw new Error(`La categoría ${categoria} no tiene ventas registradas`);
   }
 
-  if (!categoriaCartonesSnap.exists) {
+  if (!categoriaCartonesSnap) {
     throw new Error(`La categoría ${categoria} no tiene cartones vendidos`);
   }
 
-  const categoriaTotal = categoriaTotalSnap.data();  // Extraemos datos reales
+  const categoriaTotal = categoriaTotalSnap.data();
   const categoriaCartones = categoriaCartonesSnap.data();
 
   if (!categoriaTotal.total || categoriaTotal.total <= 0) {
@@ -105,7 +89,6 @@ async function cerrarCategoria({
     categoria,
   });
 
-
   if (!gananciaCategoria || gananciaCategoria.gananciaNeta === undefined) {
     throw new Error(
       `No se pudo calcular ganancia para la categoría ${categoria}`
@@ -116,80 +99,34 @@ async function cerrarCategoria({
   // 4️⃣ GUARDAR CIERRE HISTÓRICO
   // ======================
 
-  await db
-    .collection("Cierres_contables")
-    .doc(mesAnio)
-    .set(
-      {
-        [categoria]: { // Usamos clave dinamica y guardamos por categoria dentro del mes
-          ...gananciaCategoria,
-          categoria,
-          mesAnio,
-          ejecutadoPor: adminUsuario,
-          fechaCierre: new Date(),
-        },
-      },
-      { merge: true } // No sobreescribimos
-    );
+  await adminRepo.setCierreContable(mesAnio, categoria, {
+    ...gananciaCategoria,
+    categoria,
+    mesAnio,
+    ejecutadoPor: adminUsuario,
+    fechaCierre: new Date(),
+  });
 
   // ======================
-  // 5️⃣ LIMPIAR SKUS
+  // 5️⃣ LIMPIAR SKUS Y RESETEAR TOTALES
   // ======================
 
-  const skusTotalSnap = await categoriaTotalRef.collection("skus").get();
-
-  for (const doc of skusTotalSnap.docs) {
-    await doc.ref.delete(); // Limpiamos el mes
-  }
-
-  const skusCartonesSnap =
-    await categoriaCartonesRef.collection("skus").get();
-
-  for (const doc of skusCartonesSnap.docs) {
-    await doc.ref.delete();
-  }
+  await Promise.all([
+    contabilidadRepo.limpiarCategoriaTotal(mesAnio, categoria),
+    contabilidadRepo.limpiarCategoriaCartones(mesAnio, categoria),
+  ]);
 
   // ======================
-  // 6️⃣ RESETEAR TOTALES
+  // 6️⃣ AUDITORÍA ADMIN
   // ======================
 
-  await categoriaTotalRef.set(
-    {
-      total: 0,
-      actualizadoEn: new Date(), // Reiniciamos ventas
-    },
-    { merge: true }
-  );
-
-  await categoriaCartonesRef.set(
-    {
-      total: 0,
-      actualizadoEn: new Date(), // Reiniciamos cartones
-    },
-    { merge: true }
-  );
-
-  // ======================
-  // 7️⃣ AUDITORÍA ADMIN
-  // ======================
-
-  // Guardamos que se hizo
-
-  await db
-    .collection("AdminActions")
-    .doc(mesAnio)
-    .set(
-      {
-        [categoria]: {
-          accion: "cierre_categoria",
-          categoria,
-          mesAnio,
-          usuario: adminUsuario,
-          fecha: new Date(),
-        },
-      },
-      { merge: true }
-    );
+  await adminRepo.setAdminAction(mesAnio, categoria, {
+    accion: "cierre_categoria",
+    categoria,
+    mesAnio,
+    usuario: adminUsuario,
+    fecha: new Date(),
+  });
 
   console.log(`✅ Cierre completado para ${categoria} (${mesAnio})`);
 
