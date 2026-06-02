@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const admin = require("firebase-admin"); // SDK de Firebase Admin
-const db = require("../lib/firestore");
+const admin = require("firebase-admin");
+const adminRepo = require("../repositories/admin.repository");
 
-const { 
+const {
   cerrarMesContable,
 } = require("../services/cierreMensual.service");
 
@@ -38,15 +38,9 @@ async function adminAuth(req, res, next) {
       });
     }
 
-    /* Buscar en colección Admin 
-       No confiamos solo en el Token, tambien buscamos en nuestra DB*/
-    const adminSnap = await db
-      .collection("Admin")
-      .where("Email", "==", email)
-      .where("Activo", "==", true)
-      .where("Rol", "==", "admin")
-      .limit(1) // Limitamos a un solo resultado
-      .get();
+    /* Buscar en colección Admin
+       No confiamos solo en el Token, tambien buscamos en nuestra DB */
+    const adminSnap = await adminRepo.getAdminByEmail(email);
 
     if (adminSnap.empty) {
       return res.status(403).json({

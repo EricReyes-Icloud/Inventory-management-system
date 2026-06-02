@@ -341,6 +341,90 @@ async function setHistoricoMensual(mesAnio, data) {
 }
 
 // ═══════════════════════════════════════════
+// LECTURAS — CATEGORÍA ESPECÍFICA
+// ═══════════════════════════════════════════
+
+/**
+ * Obtiene el documento de una categoría específica en Total Productos.
+ * @param {string} mesAnio
+ * @param {string} categoria
+ * @returns {Promise<FirebaseFirestore.DocumentSnapshot | null>}
+ */
+async function getCategoriaTotal(mesAnio, categoria) {
+  const snap = await db
+    .doc(pathTotalProductos(mesAnio))
+    .collection("productos")
+    .doc(categoria)
+    .get();
+  return snap.exists ? snap : null;
+}
+
+/**
+ * Obtiene el documento de una categoría específica en Cartones Vendidos.
+ * @param {string} mesAnio
+ * @param {string} categoria
+ * @returns {Promise<FirebaseFirestore.DocumentSnapshot | null>}
+ */
+async function getCategoriaCartones(mesAnio, categoria) {
+  const snap = await db
+    .doc(pathCartonesVendidos(mesAnio))
+    .collection("productos")
+    .doc(categoria)
+    .get();
+  return snap.exists ? snap : null;
+}
+
+// ═══════════════════════════════════════════
+// ESCRITURA — LIMPIEZA DE CATEGORÍA
+// ═══════════════════════════════════════════
+
+/**
+ * Elimina todos los SKUs de una categoría en Total Productos y resetea su total a 0.
+ * @param {string} mesAnio
+ * @param {string} categoria
+ * @returns {Promise<void>}
+ */
+async function limpiarCategoriaTotal(mesAnio, categoria) {
+  const categoriaRef = db
+    .doc(pathTotalProductos(mesAnio))
+    .collection("productos")
+    .doc(categoria);
+
+  // Eliminar todos los SKUs
+  const skusSnap = await categoriaRef.collection("skus").get();
+  const batch = db.batch();
+  skusSnap.docs.forEach((doc) => batch.delete(doc.ref));
+
+  // Resetear total
+  batch.set(categoriaRef, { total: 0, actualizadoEn: new Date() }, { merge: true });
+
+  return batch.commit();
+}
+
+/**
+ * Elimina todos los SKUs de una categoría en Cartones Vendidos y resetea su total a 0.
+ * @param {string} mesAnio
+ * @param {string} categoria
+ * @returns {Promise<void>}
+ */
+async function limpiarCategoriaCartones(mesAnio, categoria) {
+  const categoriaRef = db
+    .doc(pathCartonesVendidos(mesAnio))
+    .collection("productos")
+    .doc(categoria);
+
+  // Eliminar todos los SKUs
+  const skusSnap = await categoriaRef.collection("skus").get();
+  const batch = db.batch();
+  skusSnap.docs.forEach((doc) => batch.delete(doc.ref));
+
+  // Resetear total
+  batch.set(categoriaRef, { total: 0, actualizadoEn: new Date() }, { merge: true });
+
+  return batch.commit();
+}
+
+// ═══════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════
 
@@ -372,6 +456,14 @@ module.exports = {
   // Batch — ejecución
   executeBatch,
   executeBatchWithUpdates,
+
+  // Lecturas — categoría específica
+  getCategoriaTotal,
+  getCategoriaCartones,
+
+  // Limpieza de categoría y SKUs
+  limpiarCategoriaTotal,
+  limpiarCategoriaCartones,
 
   // Escritura — histórico
   setHistoricoMensual,
