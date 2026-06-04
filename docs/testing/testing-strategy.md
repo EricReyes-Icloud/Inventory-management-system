@@ -1,4 +1,4 @@
-# Testing Strategy — Sistema Contable (Condimentos El Colibrí)
+# Testing Strategy 
 
 ## Objetivo
 

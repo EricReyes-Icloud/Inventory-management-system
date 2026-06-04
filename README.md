@@ -1,31 +1,211 @@
-#  Condimentos El Colibrí - Inventory Management System
+<div style="text-align: center;">
 
-Sistema de gestión de inventario desarrollado para una empresa real del sector alimenticio.
+<img src="./imgs/Miniatura Inventory-management-system.png" />
 
-##  Tecnologías
+## Inventory Management System
 
-- Flutter
+<p>
+Sistema de gestión de inventario desarrollado para una empresa real del sector alimenticio, enfocado en automatización operativa, control contable y arquitectura escalable.
+</p>
+
+</div>
+
+---
+
+## Descripción
+
+Inventory Management System es una aplicación web diseñada para digitalizar y automatizar el control de inventario, ventas y procesamiento contable de **Condimentos El Colibrí**.
+
+El proyecto nace a partir de una necesidad real de la empresa, la cual realizaba sus procesos manualmente, generando:
+
+- Pérdida de tiempo
+- Errores de inventario
+- Dificultad para calcular ganancias
+- Baja trazabilidad de ventas
+
+El sistema busca resolver estos problemas mediante automatización, centralización de datos y procesamiento inteligente de operaciones.
+
+---
+
+## Problema que resuelve
+
+La empresa aún maneja:
+
+- Inventarios manuales
+- Registros físicos
+- Control deficiente de productos y ventas
+
+Esto genera:
+
+- Inconsistencias de stock
+- Errores humanos
+- Pérdida de información
+- Poca escalabilidad
+- Baja capacidad de análisis financiero
+
+Inventory Management System transforma estos procesos en un flujo digital centralizado y automatizado.
+
+---
+
+## Stack Tecnologico
+
+### Frontend
+- React
+- HTML
+- CSS
+
+### Backend
 - Node.js
 - Express.js
+
+### Database
 - Firebase Firestore
 
-##  Funcionalidades
+### Testing
+- Vitest
 
-- Registro de ventas
-- Control automático de inventario
-- Cálculo de ganancias
-- Procesamiento contable automático
-- Almacenamiento historico del proceso
+### Toolings
+- Git
+- GitHub
+- OpenCode
+- Ollama
 
-##  Arquitectura
+---
 
-Arquitectura basada en servicios con separación clara de responsabilidades.
+## Arquitectura
 
-##  Roles
+El proyecto sigue una arquitectura modular basada en separación de responsabilidades.
 
-- Administrador
-- Operador
+### Arquitectura General
 
-##  Estado del Proyecto
+```text
+Frontend (React)
+        ↓
+REST API (Express.js)
+        ↓
+Services Layer
+        ↓
+Firebase Firestore
+```
 
-En desarrollo activo.
+### Principios utilizados
+
+- Modular Architecture
+- Separation of Concerns
+- Service Layer Pattern
+- Scalable Folder Structure
+- Reusable Business Logic
+- Centralized Validation
+- Automated Processing Flows
+
+---
+
+## Estructura general del proyecto
+
+```text
+inventory-management-system/
+│
+├── Frontend/               # Frontend React
+├── Backend/                # Backend Express
+|    │
+|    ├── services/               # Logica de negocio
+|    ├── routes/                 # Rutas de la API
+|    ├── utils/                  # Utilidaddes compartidas
+|    ├── tests/                  # Tests automatizados
+|
+├── docs/                   # Documentación tecnica
+│
+└── README.md
+```
+
+---
+
+## Testing
+
+El proyecto incluye testing automatizado para validar reglas de negocio críticas.
+
+### Cobertura actual
+
+- Procesamiento contable
+- Validaciones de pedidos
+- Reglas de inventario
+- Casos límite operativos
+
+### Tecnología
+
+- Vitest
+
+---
+
+## Deployment
+
+El proyecto está diseñado para despliegue cloud-based.
+
+### Posibles plataformas
+
+### Frontend
+- Vercel
+- Netlify
+
+### Backend
+- Render
+- Railway
+
+### Database
+- Firebase Firestore
+
+---
+
+## Desarrollado asistido por IA
+
+Este proyecto incorpora integración estratégica de inteligencia artificial como parte del flujo de desarrollo.
+
+### Uso de IA en el proyecto
+
+- Arquitectura asistida por IA
+- Automatización de testing
+- Generación de documentación técnica
+- Soporte para agentes IA mediante `agent.md`
+- Integración profesional con OpenCode
+
+### Filosofía
+
+La IA es utilizada como herramienta de productividad y aceleración técnica, mientras que las decisiones arquitectónicas, validaciones y dirección del proyecto son realizadas manualmente.
+
+El objetivo es hacer uso de un enfoque moderno de desarrollo dirigido por especificaciones donde el desarrollador lidera y supervisa el uso de IA dentro de un ecosistema profesional.
+
+---
+
+## Filosofía del proyecto
+
+Este proyecto no busca únicamente "funcionar".
+
+Está diseñado para:
+
+- Aplicar buenas prácticas reales
+- Construir arquitectura mantenible
+- Implementar automatización inteligente
+- Desarrollar habilidades de ingeniería profesional
+- Demostrar capacidad de dirección técnica utilizando IA
+
+El enfoque principal es crear un sistema escalable, entendible y alineado con prácticas modernas de desarrollo de software.
+
+---
+
+## Estado del proyecto
+
+En desarrollo activo
+
+Actualmente el proyecto continúa evolucionando en:
+
+- Arquitectura
+- Testing
+- Automatización
+- Integración IA
+- Experiencia de usuario
+
+---
+
+## Autor
+
+Desarrollado por <strong>Eric Reyes</strong>.

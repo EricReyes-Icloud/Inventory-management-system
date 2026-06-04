@@ -3,7 +3,7 @@ const db = require("../lib/firestore");
 const { cerrarGananciasPorCategoria } = require("./ganancias.service");
 
 /**
- * 🔒 CIERRE ADMINISTRATIVO POR CATEGORÍA
+ * CIERRE ADMINISTRATIVO POR CATEGORÍA
  * 1. Calcula ganancias de la categoría
  * 2. Guarda histórico del cierre
  * 3. Resetea totales y cartones
@@ -23,7 +23,7 @@ async function cerrarCategoria({
   console.log(`🔒 Iniciando cierre administrativo: ${categoria} (${mesAnio})`);
 
   // ======================
-  // 1️⃣ REFERENCIAS
+  // REFERENCIAS
   // ======================
 
   const totalMesRef = db.collection("Total Productos").doc(mesAnio);
@@ -38,6 +38,8 @@ async function cerrarCategoria({
     .doc(categoria);
 
   const invertirRef = db.collection("Invertir").doc(categoria);
+
+  // Lectura en paralelo con Promise.all
 
   const [
     totalMesSnap,
@@ -54,12 +56,14 @@ async function cerrarCategoria({
   ]);
 
   // ======================
-  // 2️⃣ VALIDACIONES
+  // VALIDACIONES
   // ======================
 
   if (!totalMesSnap.exists) {
     throw new Error(`No existe Total Productos para ${mesAnio}`);
   }
+
+  // Evitamos calculos corruptos
 
   if (!cartonesMesSnap.exists) {
     throw new Error(`No existe Cartones_vendidos para ${mesAnio}`);
@@ -77,7 +81,7 @@ async function cerrarCategoria({
     throw new Error(`La categoría ${categoria} no tiene cartones vendidos`);
   }
 
-  const categoriaTotal = categoriaTotalSnap.data();
+  const categoriaTotal = categoriaTotalSnap.data();  // Extraemos datos reales
   const categoriaCartones = categoriaCartonesSnap.data();
 
   if (!categoriaTotal.total || categoriaTotal.total <= 0) {
@@ -101,6 +105,7 @@ async function cerrarCategoria({
     categoria,
   });
 
+
   if (!gananciaCategoria || gananciaCategoria.gananciaNeta === undefined) {
     throw new Error(
       `No se pudo calcular ganancia para la categoría ${categoria}`
@@ -116,7 +121,7 @@ async function cerrarCategoria({
     .doc(mesAnio)
     .set(
       {
-        [categoria]: {
+        [categoria]: { // Usamos clave dinamica y guardamos por categoria dentro del mes
           ...gananciaCategoria,
           categoria,
           mesAnio,
@@ -124,7 +129,7 @@ async function cerrarCategoria({
           fechaCierre: new Date(),
         },
       },
-      { merge: true }
+      { merge: true } // No sobreescribimos
     );
 
   // ======================
@@ -134,7 +139,7 @@ async function cerrarCategoria({
   const skusTotalSnap = await categoriaTotalRef.collection("skus").get();
 
   for (const doc of skusTotalSnap.docs) {
-    await doc.ref.delete();
+    await doc.ref.delete(); // Limpiamos el mes
   }
 
   const skusCartonesSnap =
@@ -151,7 +156,7 @@ async function cerrarCategoria({
   await categoriaTotalRef.set(
     {
       total: 0,
-      actualizadoEn: new Date(),
+      actualizadoEn: new Date(), // Reiniciamos ventas
     },
     { merge: true }
   );
@@ -159,7 +164,7 @@ async function cerrarCategoria({
   await categoriaCartonesRef.set(
     {
       total: 0,
-      actualizadoEn: new Date(),
+      actualizadoEn: new Date(), // Reiniciamos cartones
     },
     { merge: true }
   );
@@ -167,6 +172,8 @@ async function cerrarCategoria({
   // ======================
   // 7️⃣ AUDITORÍA ADMIN
   // ======================
+
+  // Guardamos que se hizo
 
   await db
     .collection("AdminActions")

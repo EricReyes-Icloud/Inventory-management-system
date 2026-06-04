@@ -1,9 +1,10 @@
-#  Decisiones Técnicas
-Condimentos El Colibrí - Inventory Management System
+##  Decisiones Técnicas
+
+Inventory Management System
 
 ---
 
-## 1. Elección de Arquitectura Cliente-Servidor
+### 1. Elección de Arquitectura Cliente-Servidor
 
 Se decidió separar frontend y backend para:
 
@@ -16,11 +17,11 @@ Esta decisión permite migrar el frontend sin afectar la lógica de negocio.
 
 ---
 
-## 2. Elección de Node.js + Express.js
+### 2. Elección de Node.js + Express.js
 
 Se eligió Node.js por:
 
-- Alto rendimiento en operaciones I/O
+- Alto rendimiento en operaciones I/O (Entrada/salida)
 - Facilidad para crear APIs REST
 - Gran ecosistema
 - Curva de desarrollo rápida
@@ -29,7 +30,7 @@ Express.js se utiliza por su simplicidad y modularidad.
 
 ---
 
-## 3. Uso de Arquitectura Basada en Servicios
+### 3. Uso de Arquitectura Modular basada en Servicios
 
 La lógica de negocio no se coloca directamente en las rutas.
 
@@ -44,7 +45,7 @@ Esto facilita una futura migración a microservicios si el sistema crece.
 
 ---
 
-## 4. Elección de Firebase Firestore (NoSQL)
+### 4. Elección de Firebase Firestore (NoSQL)
 
 Se eligió Firestore en lugar de una base de datos relacional por:
 
@@ -57,12 +58,12 @@ Se adoptó un modelo basado en documentos con denormalización controlada.
 
 ---
 
-## 5. Denormalización Estratégica
+### 5. Denormalización Estratégica
 
 En las ventas se almacenan datos duplicados como:
 
-- nombre del producto
-- precio al momento de la venta
+- Nombre del producto
+- Precio al momento de la venta
 
 Esto evita inconsistencias históricas si el precio cambia en el futuro.
 
@@ -70,7 +71,7 @@ Se priorizó eficiencia de lectura sobre normalización estricta.
 
 ---
 
-## 6. Cálculo de Ganancias solo con aprovacion
+### 6. Cálculo de Ganancias solo con aprovacion
 
 Las ganancias se calculan y almacenan en el documento Ganancias, solo cuando se aprueba el proceso de cierre.
 
@@ -82,7 +83,7 @@ Razones:
 
 ---
 
-## 7. Implementación de Jobs para Procesos Contables
+### 7. Implementación de Jobs para Procesos Contables
 
 Se implementaron procesos automáticos para:
 
@@ -94,7 +95,7 @@ Esto desacopla procesos críticos del flujo principal de la aplicación.
 
 ---
 
-## 8. Manejo de Roles
+### 8. Manejo de Roles
 
 Se implementó diferenciación entre:
 
@@ -106,7 +107,7 @@ Toda validación importante ocurre en backend.
 
 ---
 
-## 9. Preparación para Escalabilidad
+### 9. Preparación para Escalabilidad
 
 La arquitectura actual permite:
 
