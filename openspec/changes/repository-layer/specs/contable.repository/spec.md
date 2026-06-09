@@ -4,61 +4,62 @@
 
 ### Requirement: Repository Interface
 
-The system MUST provide a `contable.repository.js` module that exposes methods to interact with Firestore collections related to accounting data. This repository MUST encapsulate all direct Firestore operations and provide a clean interface for the service layer.
+The system MUST provide a `contable.repository.js` module that encapsulates all direct Firestore access for `Ganancias` and `Invertir` subcollections. The repository SHALL import `db` directly (`require("../lib/firestore")`) following the existing repository pattern in this project.
 
 The repository MUST expose the following methods:
-- `getInvertir(categoria)`: Retrieves investment data for a given category
-- `getCostosFijos(categoria)`: Retrieves fixed costs data for a given category
-- `getCostosVariables(categoria)`: Retrieves variable costs data for a given category
-- `getGanancias(mesAnio)`: Retrieves earnings data for a given month and year
 
-#### Scenario: Retrieve Investment Data
+| Method | Firestore Path | Type |
+|--------|---------------|------|
+| `getInvertir(categoria)` | `Invertir/{categoria}` | Read |
+| `getCostosFijos(categoria)` | `Invertir/{categoria}/costos_fijos/costos_fijos` | Read |
+| `getCostosVariables(categoria)` | `Invertir/{categoria}/costos_variables/costos_variables` | Read |
+| `getCostosVariablesPorProducto(categoria, producto)` | `Invertir/{categoria}/costos_variables/{producto}` | Read |
+| `getGanancias(mesAnio)` | `Ganancias/{mesAnio}` | Read |
+| `setGanancias(mesAnio, data)` | `Ganancias/{mesAnio}` | Merge write |
+| `setHistoricoCompras(categoria, mesAnio, data)` | `Invertir/{categoria}/historico_compras/{mesAnio}` | Merge write |
+| `resetCostosVariables(categoria)` | `Invertir/{categoria}/costos_variables/costos_variables` | Write (zero all fields) |
+| `setCostosVariablePorProducto(categoria, producto, data)` | `Invertir/{categoria}/costos_variables/{producto}` | Merge write |
 
-- GIVEN a valid `categoria` parameter
-- WHEN `getInvertir(categoria)` is called
-- THEN the repository MUST return the document from `Invertir/{categoria}` collection
-- AND the returned data MUST match the Firestore document structure
+#### Scenario: Read methods return Firestore snapshots
 
-#### Scenario: Retrieve Fixed Costs Data
+- GIVEN a valid `categoria` and/or `mesAnio`
+- WHEN any read method is called
+- THEN the method SHALL return the Firestore document or `null` if not found
 
-- GIVEN a valid `categoria` parameter
-- WHEN `getCostosFijos(categoria)` is called
-- THEN the repository MUST return the document from `Invertir/{categoria}/costos_fijos` subcollection
-- AND the returned data MUST match the Firestore document structure
+#### Scenario: Write methods use merge semantics
 
-#### Scenario: Retrieve Earnings Data
+- GIVEN a write call with `data`
+- WHEN `setGanancias` or `setHistoricoCompras` is invoked
+- THEN the repository SHALL use `{ merge: true }` to avoid overwriting sibling fields
 
-- GIVEN a valid `mesAnio` parameter
-- WHEN `getGanancias(mesAnio)` is called
-- THEN the repository MUST return the document from `Ganancias/{mesAnio}` collection
-- AND the returned data MUST match the Firestore document structure
+#### Scenario: resetCostosVariables zeros all fields
+
+- GIVEN an existing costos_variables document with numeric fields
+- WHEN `resetCostosVariables(categoria)` is called
+- THEN each numeric field in the document SHALL be set to `0`
+- AND the field count and field names SHALL be preserved
 
 ### Requirement: Error Handling
 
-The repository MUST implement consistent error handling for all methods. Errors from Firestore operations MUST be caught and wrapped in a standardized format before being thrown to the service layer.
+The repository SHALL wrap Firestore errors in an `Error` with a descriptive message. `get` methods SHALL return `null` for missing documents rather than throwing.
 
-#### Scenario: Invalid Category
+#### Scenario: Document not found returns null
 
-- GIVEN an invalid `categoria` parameter
-- WHEN any repository method is called with this parameter
-- THEN the repository MUST return `null` or throw a standardized error
-- AND the error MUST be catchable by the service layer
-
-### Requirement: Testability
-
-The repository MUST be designed to be easily testable. All methods MUST be pure functions that accept dependencies as parameters, allowing for easy mocking during testing.
-
-#### Scenario: Mock Firestore Dependency
-
-- GIVEN a mocked Firestore instance is passed to the repository
-- WHEN repository methods are called
-- THEN the methods MUST use the mocked instance instead of the real Firestore
-- AND the behavior MUST be predictable for testing purposes
+- GIVEN a document does not exist at the target path
+- WHEN a read method is called
+- THEN the method SHALL return `null` (not throw)
 
 ## MODIFIED Requirements
 
-None
+### ~~Requirement: Testability~~ (REMOVED — see below)
+
+(Previously: Repositories should accept dependencies as parameters for mock injection)
+
+The existing project convention is that repositories import `db` directly at module scope. The testability requirement is REMOVED — testing is done by mocking `../lib/firestore` at the module level using `jest.mock` or `proxyquire`, not through constructor injection.
 
 ## REMOVED Requirements
 
-None
+### Requirement: Testability — Dependency Injection
+
+(Reason: Contradicts existing project convention. All repositories in this project import `db` directly. Test mocks apply at the module level via `jest.mock("../lib/firestore")`.)
+(Migration: Tests SHALL mock `../lib/firestore` at module load time. No constructor/method-level injection is needed.)
