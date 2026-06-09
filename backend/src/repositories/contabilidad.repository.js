@@ -327,16 +327,16 @@ async function executeBatchWithUpdates(sets, updates) {
 
 /**
  * Guarda un snapshot del histórico mensual.
+ * The service now passes the full data payload including metadata
+ * (estado, generadoEn, generadoPor) — no hardcoded defaults.
  * @param {string} mesAnio
- * @param {object} data — { totalProductos, cartonesVendidos }
+ * @param {object} data — Full payload including totalProductos, cartonesVendidos, estado, generadoEn, generadoPor
  * @returns {Promise<FirebaseFirestore.WriteResult>}
  */
 async function setHistoricoMensual(mesAnio, data) {
   return db.doc(pathHistoricoMensual(mesAnio)).set({
     mesAnio,
     ...data,
-    estado: "cerrado",
-    generadoEn: new Date(),
   });
 }
 

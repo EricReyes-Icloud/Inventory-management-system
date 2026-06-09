@@ -27,8 +27,8 @@ Chain strategy: feature-branch-chain
 
 ## Phase 1: Repository Foundation
 
-- [ ] 1.1 Create `repositories/contable.repository.js` with 9 methods: `getInvertir`, `getCostosFijos`, `getCostosVariables`, `getCostosVariablesPorProducto`, `getGanancias`, `setGanancias`, `setHistoricoCompras`, `resetCostosVariables`, `setCostosVariablePorProducto`. Follow pattern from `contabilidad.repository.js` (`const db = require("../lib/firestore")`, no DI, `null` for missing docs).
-- [ ] 1.2 Modify `repositories/contabilidad.repository.js` — `setHistoricoMensual(mesAnio, data)` accepts full data payload from service (including `generadoPor`); remove hardcoded field defaults.
+- [x] 1.1 Create `repositories/contable.repository.js` with 9 methods: `getInvertir`, `getCostosFijos`, `getCostosVariables`, `getCostosVariablesPorProducto`, `getGanancias`, `setGanancias`, `setHistoricoCompras`, `resetCostosVariables`, `setCostosVariablePorProducto`. Follow pattern from `contabilidad.repository.js` (`const db = require("../lib/firestore")`, no DI, `null` for missing docs).
+- [x] 1.2 Modify `repositories/contabilidad.repository.js` — `setHistoricoMensual(mesAnio, data)` accepts full data payload from service (including `generadoPor`); remove hardcoded field defaults.
 
 ## Phase 2: Job Extraction
 
