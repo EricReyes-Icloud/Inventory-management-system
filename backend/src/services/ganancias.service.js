@@ -1,11 +1,17 @@
 // services/ganancias.service.js
-const db = require("../lib/firestore");
+// Uses repositories for all Firestore access — no direct db calls.
+const contabilidadRepo = require("../repositories/contabilidad.repository");
+const contableRepo = require("../repositories/contable.repository");
 
 /**
- * Calcula y guarda ganancias por categoría y mes
- * USA EL HISTÓRICO MENSUAL (NO los acumuladores vivos)
+ * Calculates and persists earnings for a category in a given month.
+ * Reads from Historico_Mensual (single source of truth), validates
+ * fixed and variable costs uniformly, writes Ganancias, saves a
+ * historico_compras snapshot, and resets variable costs.
+ *
+ * @param {{ mesAnio: string, categoria: string }} params
+ * @returns {Promise<object>} — the earnings payload that was saved
  */
-
 async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
   if (!mesAnio || !categoria) {
     throw new Error("mesAnio y categoria son obligatorios");
@@ -13,173 +19,135 @@ async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
 
   console.log(`💰 Cerrando ganancias para ${categoria} (${mesAnio})`);
 
+  // ────────────────────
+  // 📦 HISTORICO MENSUAL
+  // ────────────────────
 
-  // --------------------
-  // 📦 HISTÓRICO MENSUAL
-  // --------------------
+  const historicoSnap = await contabilidadRepo.getHistoricoMensual(mesAnio);
 
-  // Buscamos el documento del mes
-  const historicoSnap = await db 
-    .collection("Historico_Mensual")
-    .doc(mesAnio)
-    .get();
-
-  // Si no existe  
-  if (!historicoSnap.exists) {
+  if (!historicoSnap) {
     throw new Error(`No existe histórico mensual para ${mesAnio}`);
   }
 
-  // Convertimos el documento en un objeto JS
   const historico = historicoSnap.data();
 
-  // --------------------
+  // ────────────────────
   // 📊 Ventas
-  // --------------------
+  // ────────────────────
 
-  // Buscamos ventas de la categoria
   const categoriaVentas = historico.totalProductos?.[categoria];
 
-  // Si no hay ventas no calcula
   if (!categoriaVentas || categoriaVentas.total <= 0) {
     throw new Error(`Ventas en cero para ${categoria}`);
   }
 
-  // Total vendido
   const ventaTotal = categoriaVentas.total;
 
-  // --------------------
+  // ────────────────────
   // 📦 Cartones
-  // --------------------
+  // ────────────────────
 
-  // Cuántos cartones se vendieron, y si no hay devolvemos 0
   const cartonesTotal = historico.cartonesVendidos?.[categoria]?.total || 0;
 
   if (cartonesTotal <= 0) {
-    throw new Error(`No hay cartones vendidos para ${categoria}`); // Informamos que no hay cartones
+    throw new Error(`No hay cartones vendidos para ${categoria}`);
   }
 
-  // --------------------
+  // ────────────────────
   // 💸 Costos fijos base
-  // --------------------
+  // ────────────────────
 
-  // Dentro de nuestra coleccion Invertir buscamos costos_fijos para esa categoria
-  const costosFijosSnap = await db
-    .collection("Invertir")
-    .doc(categoria)
-    .collection("costos_fijos")
-    .doc("costos_fijos")
-    .get();
+  const costosFijosSnap = await contableRepo.getCostosFijos(categoria);
 
-  // Si no existen costos_fijos  
-  if (!costosFijosSnap.exists) {
+  if (!costosFijosSnap) {
     throw new Error(`No existen costos fijos para ${categoria}`);
   }
 
-  // Inicializamos el acumulador
   const costosFijosData = costosFijosSnap.data() || {};
   let costosFijosUnit = 0;
 
-  // Recorremos todos los costos
   for (const v of Object.values(costosFijosData)) {
-    if (typeof v !== "number" || v < 0) { // Validamos que sean números validos
+    if (typeof v !== "number" || v < 0) {
       throw new Error(`Costo fijo inválido para ${categoria}`);
     }
-    costosFijosUnit += v; // Sumamos todos los costos
+    costosFijosUnit += v;
   }
 
-  // =====================================================
-  // 🐝 LÓGICA ESPECIAL PARA MIEL
-  // =====================================================
+  // ────────────────────────────────────────────────────────
+  // 🐝 LOGICA ESPECIAL PARA MIEL vs LOGICA NORMAL
+  // ────────────────────────────────────────────────────────
 
   let inversionTotal = 0;
   let costosVariablesUnit = 0;
+  let costosVariablesData = {};
 
   if (categoria === "Miel") {
-    const productos = categoriaVentas.productos || {}; // Obtenemos los productos de Miel
+    const productos = categoriaVentas.productos || {};
 
-    // Recorremos cada producto
     for (const [nombreProducto, dataProducto] of Object.entries(productos)) {
-      // Datos por producto
-      const ventaProducto = dataProducto.total || 0;
       const cartonesProducto = dataProducto.cartones || 0;
 
-      // Si no se vendio ignoramos
       if (cartonesProducto <= 0) continue;
 
       let costoUnitProducto = costosFijosUnit;
 
-      //  Si es uno de los productos especiales (solo estos tienen costos variables extra)
+      // Validate variable costs per product uniformly — throw if missing
       if (["Frascos", "Botellas", "Copas"].includes(nombreProducto)) {
-        const costosVarSnap = await db
-          .collection("Invertir")
-          .doc("Miel")                       // Buscamos costos variables por producto
-          .collection("costos_variables")
-          .doc(nombreProducto)
-          .get();
+        const costosVarSnap = await contableRepo.getCostosVariablesPorProducto(
+          "Miel",
+          nombreProducto
+        );
 
-        // Si existen los sumamos  
-        if (costosVarSnap.exists) {
-          const dataVar = costosVarSnap.data();
-          let sumaVar = 0;
-
-          // Sumamos solo valores validos
-          for (const v of Object.values(dataVar)) {
-            if (typeof v === "number" && v > 0) {
-              sumaVar += v;
-            }
-          }
-
-          // Acumulamos costo unitario y total global
-          costoUnitProducto += sumaVar;
-          costosVariablesUnit += sumaVar;
+        if (!costosVarSnap) {
+          throw new Error(
+            `No existen costos variables para ${nombreProducto} en categoria Miel`
+          );
         }
+
+        const dataVar = costosVarSnap.data() || {};
+        let sumaVar = 0;
+
+        for (const v of Object.values(dataVar)) {
+          if (typeof v === "number" && v > 0) {
+            sumaVar += v;
+          }
+        }
+
+        costoUnitProducto += sumaVar;
+        costosVariablesUnit += sumaVar;
+        costosVariablesData = { ...costosVariablesData, ...dataVar };
       }
 
-      // Hacemos el calculo de inversion por producto
       const inversionProducto = costoUnitProducto * cartonesProducto;
       inversionTotal += inversionProducto;
     }
-
   } else {
+    // Non-Miel: aggregate costos_variables
+    const costosVariablesSnap = await contableRepo.getCostosVariables(categoria);
 
-    // =====================================================
-    // 🔵 LÓGICA NORMAL (NO SE TOCA)
-    // =====================================================
-    const costosVariablesSnap = await db
-      .collection("Invertir")
-      .doc(categoria)
-      .collection("costos_variables")
-      .doc("costos_variables")
-      .get();
-
-    // Si no existen costos variables  
-    if (!costosVariablesSnap.exists) {
+    if (!costosVariablesSnap) {
       throw new Error(`No existen costos variables para ${categoria}`);
     }
 
-    const costosVariablesData = costosVariablesSnap.data() || {};
+    costosVariablesData = costosVariablesSnap.data() || {};
 
-    // Recorremos los valores
     for (const v of Object.values(costosVariablesData)) {
-      if (typeof v !== "number" || v < 0) { // Validamos formato
+      if (typeof v !== "number" || v < 0) {
         throw new Error(`Costo variable inválido para ${categoria}`);
       }
-      costosVariablesUnit += v; // Sumamos
+      costosVariablesUnit += v;
     }
 
-    // Calculamos segun la formula (inversión = (fijos + variables) * cantidad)
     const inversionUnit = costosFijosUnit + costosVariablesUnit;
     inversionTotal = inversionUnit * cartonesTotal;
   }
 
-  // --------------------
-  // 🧮 Cálculos
-  // --------------------
+  // ────────────────────
+  // 🧮 Calculos
+  // ────────────────────
 
-  // Restamos el total de la venta menos la inversion total
   const gananciaNeta = ventaTotal - inversionTotal;
 
-  // Objeto que vamos a guardar en DB
   const data = {
     categoria,
     mesAnio,
@@ -193,51 +161,26 @@ async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
     fechaCierre: new Date(),
   };
 
-  // --------------------
+  // ────────────────────
   // ✅ Guardar ganancias
-  // --------------------
+  // ────────────────────
 
-  // Guardamos por mes
-  await db
-    .collection("Ganancias")
-    .doc(mesAnio)
-    .set({ [categoria]: data }, { merge: true }); // No borra otras categorias
+  await contableRepo.setGanancias(mesAnio, { [categoria]: data });
 
+  // ────────────────────
+  // 🗂️ Historico de costos variables
+  // ────────────────────
 
-  // --------------------
-  // 🗂️ Histórico de costos variables
-  // --------------------
+  await contableRepo.setHistoricoCompras(categoria, mesAnio, {
+    ...costosVariablesData,
+    fechaCierre: new Date(),
+  });
 
-  // Guardamos un snapshot de costos variables del mes
-  await db
-    .collection("Invertir")
-    .doc(categoria)
-    .collection("historico_compras")
-    .doc(mesAnio)
-    .set(
-      {
-        ...costosVariablesData,
-        fechaCierre: new Date(),
-      },
-      { merge: true }
-    );
-
-
-  // --------------------
+  // ────────────────────
   // 🔄 Reiniciar costos variables
-  // --------------------
-  
-  // Creamos un objeto con todo en 0
-  const resetData = {};
-  for (const key of Object.keys(costosVariablesData)) {
-    resetData[key] = 0;
-  }
+  // ────────────────────
 
-  await costosVariablesRef.set(resetData, { merge: true });
-
-
-
-
+  await contableRepo.resetCostosVariables(categoria);
 
   console.log(`✅ Ganancias cerradas (${categoria} - ${mesAnio})`);
 

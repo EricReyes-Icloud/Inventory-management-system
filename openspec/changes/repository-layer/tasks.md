@@ -32,14 +32,14 @@ Chain strategy: feature-branch-chain
 
 ## Phase 2: Job Extraction
 
-- [ ] 2.1 Extract `processPendingOrders()` as named export from `jobs/jobContableMensual.js`. Iterates client/mes/pedido, processes pending, skips done.
-- [ ] 2.2 Refactor `jobContableMensual.js` — main export wraps `processPendingOrders()`; cron behavior unchanged. Update `module.exports`.
+- [x] 2.1 Extract `processPendingOrders()` as named export from `jobs/jobContableMensual.js`. Iterates client/mes/pedido, processes pending, skips done.
+- [x] 2.2 Refactor `jobContableMensual.js` — main export wraps `processPendingOrders()`; cron behavior unchanged. Update `module.exports`.
 
 ## Phase 3: Service Refactors
 
-- [ ] 3.1 Refactor `services/ganancias.service.js` — replace all 7 `db.collection()` calls with `contableRepo.*`; fix `costosVariablesRef` bug (line 236 → `contableRepo.resetCostosVariables(categoria)`); uniform Miel validation (throw if missing, no silent skip); export only `cerrarGananciasPorCategoria`.
-- [ ] 3.2 Modify `services/contabilidad.service.js` — `generarHistoricoMensual(mesAnio, adminUid)`; remove existence guard (idempotent overwrite); pass metadata (`estado`, `generadoEn`, `generadoPor`) in snapshot payload.
-- [ ] 3.3 Add `registrarCierre(mesAnio, adminUid, snapshot, ganancias[])` to `services/admin.actions.service.js` — consolidated audit write to `Cierres_contables` + `AdminActions` (merge, idempotent).
+- [x] 3.1 Refactor `services/ganancias.service.js` — replace all 7 `db.collection()` calls with `contableRepo.*`; fix `costosVariablesRef` bug (line 236 → `contableRepo.resetCostosVariables(categoria)`); uniform Miel validation (throw if missing, no silent skip); export only `cerrarGananciasPorCategoria`.
+- [x] 3.2 Modify `services/contabilidad.service.js` — `generarHistoricoMensual(mesAnio, adminUid)`; remove existence guard (idempotent overwrite); pass metadata (`estado`, `generadoEn`, `generadoPor`) in snapshot payload.
+- [x] 3.3 Add `registrarCierre(mesAnio, adminUid, snapshot, ganancias[])` to `services/admin.actions.service.js` — consolidated audit write to `Cierres_contables` + `AdminActions` (merge, idempotent).
 
 ## Phase 4: Orchestrator
 

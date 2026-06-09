@@ -334,6 +334,7 @@ async function executeBatchWithUpdates(sets, updates) {
  * @returns {Promise<FirebaseFirestore.WriteResult>}
  */
 async function setHistoricoMensual(mesAnio, data) {
+  // Service passes all fields including estado, generadoEn, generadoPor
   return db.doc(pathHistoricoMensual(mesAnio)).set({
     mesAnio,
     ...data,
