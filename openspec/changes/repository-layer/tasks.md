@@ -57,7 +57,7 @@ Chain strategy: feature-branch-chain
 
 ## Phase 7: Testing
 
-- [ ] 7.1 Write `tests/unit/repositories/contable.repository.test.ts` — 9 method tests following `admin.repository.test.ts` pattern (mock `firestore.js` via `Module._cache`).
-- [ ] 7.2 Write `tests/unit/services/monthlyClosing.orchestrator.test.ts` — pipeline ordering, error propagation, idempotency, missing `mesAnio` guard (mock all 3 services + `processPendingOrders`).
-- [ ] 7.3 Write `tests/unit/services/ganancias.service.test.ts` — refactored calc with `contableRepo` mocks; uniform Miel validation throws; non-Miel throws on missing costos_variables.
-- [ ] 7.4 Run full test suite — confirm all existing tests pass with zero regressions.
+- [x] 7.1 Write `tests/unit/repositories/contable.repository.test.ts` — 9 method tests following `admin.repository.test.ts` pattern (mock `firestore.js` via `Module._cache`).
+- [x] 7.2 Write `tests/unit/services/monthlyClosing.orchestrator.test.ts` — pipeline ordering, error propagation, idempotency, missing `mesAnio` guard (mock all 3 services + `processPendingOrders`).
+- [x] 7.3 Write `tests/unit/services/ganancias.service.test.ts` — refactored calc with `contableRepo` mocks; uniform Miel validation throws; non-Miel throws on missing costos_variables.
+- [x] 7.4 Run full test suite — confirm all existing tests pass with zero regressions.
