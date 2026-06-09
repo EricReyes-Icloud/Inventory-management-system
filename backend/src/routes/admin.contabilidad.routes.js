@@ -2,10 +2,7 @@ const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
 const adminRepo = require("../repositories/admin.repository");
-
-const {
-  cerrarMesContable,
-} = require("../services/cierreMensual.service");
+const orchestrator = require("../services/monthlyClosing.orchestrator");
 
 /**
  *  Validacion admin 
@@ -90,7 +87,7 @@ router.post(
         });
       }
 
-      const resultado = await cerrarMesContable(mesAnio);
+      const resultado = await orchestrator.cerrarMes(mesAnio, req.admin.uid);
 
       return res.status(200).json({
         ok: true,

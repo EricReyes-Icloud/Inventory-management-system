@@ -6,12 +6,15 @@ const contabilidadRepo = require("../repositories/contabilidad.repository");
 
 /* ================= HISTÓRICO MENSUAL ================= */
 
-async function generarHistoricoMensual(mesAnio) {
-  const historicoSnap = await contabilidadRepo.getHistoricoMensual(mesAnio);
-  if (historicoSnap) {
-    throw new Error(`El histórico de ${mesAnio} ya fue generado`);
-  }
-
+/**
+ * Generates a monthly historical snapshot from Total Productos and Cartones_vendidos.
+ * Idempotent: overwrites on re-run (no existence guard).
+ *
+ * @param {string} mesAnio — e.g. "Enero 2026"
+ * @param {string} adminUid — Firebase UID of the admin who triggered the close
+ * @returns {Promise<object>} — the generated snapshot
+ */
+async function generarHistoricoMensual(mesAnio, adminUid) {
   const totalProductos = {};
   const cartonesVendidos = {};
 
@@ -54,11 +57,16 @@ async function generarHistoricoMensual(mesAnio) {
     }
   }
 
-  // Guardar snapshot histórico
+  // Guardar snapshot histórico with metadata
   await contabilidadRepo.setHistoricoMensual(mesAnio, {
     totalProductos,
     cartonesVendidos,
+    estado: "cerrado",
+    generadoEn: new Date(),
+    generadoPor: adminUid,
   });
+
+  return { totalProductos, cartonesVendidos };
 }
 
 /* ================= EXPORTS ================= */

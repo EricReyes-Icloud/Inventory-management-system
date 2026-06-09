@@ -213,21 +213,4 @@ router.post("/pedido-libre", async (req, res) => {
   }
 });
 
-/**
- * 👉 Endpoint para recalcular ganancias manualmente
- */
-router.post("/calcular-ganancias", async (req, res) => {
-  try {
-    const { calcularGananciasInterno } = require("../services/ganancias.service");
-    const resultado = await calcularGananciasInterno();
-    if (!resultado) {
-      return res.status(404).json({ error: "no_existen_totales" });
-    }
-    res.json(resultado);
-  } catch (err) {
-    console.error("Error calculando ganancias:", err);
-    res.status(500).json({ error: "error_calculando_ganancias", details: err.message });
-  }
-});
-
 module.exports = router;
