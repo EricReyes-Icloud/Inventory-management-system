@@ -139,6 +139,50 @@ async function cerrarCategoria({
   };
 }
 
+/**
+ * Consolidated audit write for monthly closing.
+ * Records a summary in Cierres_contables and an admin action in AdminActions.
+ * Both writes use merge for idempotency.
+ *
+ * @param {string} mesAnio — e.g. "Enero 2026"
+ * @param {string} adminUid — Firebase UID of the admin who triggered the close
+ * @param {object} snapshot — the Historico_Mensual snapshot (totalProductos, cartonesVendidos)
+ * @param {Array} ganancias — array of per-category earnings results
+ * @returns {Promise<void>}
+ */
+async function registrarCierre(mesAnio, adminUid, snapshot, ganancias) {
+  const categorias = snapshot
+    ? Object.keys(snapshot.totalProductos || {})
+    : [];
+
+  // Consolidated write to Cierres_contables/{mesAnio}
+  await adminRepo.setCierreContable(mesAnio, "consolidado", {
+    mesAnio,
+    ejecutadoPor: adminUid,
+    fechaCierre: new Date(),
+    resumen: {
+      categorias,
+      totalCategorias: categorias.length,
+    },
+    ganancias,
+  });
+
+  // Consolidated write to AdminActions/{mesAnio}
+  await adminRepo.setAdminAction(mesAnio, "cierre_mensual", {
+    accion: "cierre_mensual",
+    mesAnio,
+    usuario: adminUid,
+    fecha: new Date(),
+    resumen: {
+      categorias,
+      totalGanancias: ganancias ? ganancias.length : 0,
+    },
+  });
+
+  console.log(`📝 Cierre registrado: ${mesAnio} por ${adminUid}`);
+}
+
 module.exports = {
   cerrarCategoria,
+  registrarCierre,
 };
