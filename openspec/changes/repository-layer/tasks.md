@@ -43,17 +43,17 @@ Chain strategy: feature-branch-chain
 
 ## Phase 4: Orchestrator
 
-- [ ] 4.1 Create `services/monthlyClosing.orchestrator.js` — `cerrarMes(mesAnio, adminUid)` with 4-stage pipeline: ① `processPendingOrders()` ② `contabilidadService.generarHistoricoMensual()` ③ iterate snapshot categories → `gananciasService.cerrarGananciasPorCategoria()` ④ `adminActionsService.registrarCierre()`. Error catch with stage logging, idempotent re-run.
+- [x] 4.1 Create `services/monthlyClosing.orchestrator.js` — `cerrarMes(mesAnio, adminUid)` with 4-stage pipeline: ① `processPendingOrders()` ② `contabilidadService.generarHistoricoMensual()` ③ iterate snapshot categories → `gananciasService.cerrarGananciasPorCategoria()` ④ `adminActionsService.registrarCierre()`. Error catch with stage logging, idempotent re-run.
 
 ## Phase 5: Route Wiring
 
-- [ ] 5.1 Modify `routes/admin.contabilidad.routes.js` — replace `cierreMensual.cerrarMesContable` with `orchestrator.cerrarMes(mesAnio, req.admin.uid)`. Same response shape.
-- [ ] 5.2 Modify `routes/ventas.js` — delete `/calcular-ganancias` handler (lines 219–231) and its inline `require("../services/ganancias.service")`.
+- [x] 5.1 Modify `routes/admin.contabilidad.routes.js` — replace `cierreMensual.cerrarMesContable` with `orchestrator.cerrarMes(mesAnio, req.admin.uid)`. Same response shape.
+- [x] 5.2 Modify `routes/ventas.js` — delete `/calcular-ganancias` handler (lines 219–231) and its inline `require("../services/ganancias.service")`.
 
 ## Phase 6: Cleanup
 
-- [ ] 6.1 Delete `services/cierreMensual.service.js`.
-- [ ] 6.2 Grep project for `cierreMensual` references — confirm zero remaining imports.
+- [x] 6.1 Delete `services/cierreMensual.service.js`.
+- [x] 6.2 Grep project for `cierreMensual` references — confirm zero remaining imports.
 
 ## Phase 7: Testing
 
