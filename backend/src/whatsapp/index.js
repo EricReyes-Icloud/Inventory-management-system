@@ -50,7 +50,7 @@ function esPedidoValido(texto) {
 }
 
 // Endpoint público de Twilio
-router.post("/webhook/whatsapp", async (req, res) => {
+router.post("/webhook", async (req, res) => {
   const twiml = new twilio.twiml.MessagingResponse();
 
   try {

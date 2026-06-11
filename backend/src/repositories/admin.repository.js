@@ -15,6 +15,8 @@ const db = require("../lib/firestore");
  */
 async function getAdminByEmail(email) {
   return db
+    .collection("Usuarios")
+    .doc("Usuarios")
     .collection("Admin")
     .where("Email", "==", email)
     .where("Activo", "==", true)
@@ -29,7 +31,12 @@ async function getAdminByEmail(email) {
  * @returns {Promise<FirebaseFirestore.QuerySnapshot>}
  */
 async function getAdminByRol(rol) {
-  return db.collection("Admin").where("Rol", "==", rol).get();
+  return db
+    .collection("Usuarios")
+    .doc("Usuarios")
+    .collection("Admin")
+    .where("Rol", "==", rol)
+    .get();
 }
 
 // ═══════════════════════════════════════════

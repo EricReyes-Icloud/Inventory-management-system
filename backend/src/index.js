@@ -19,6 +19,8 @@ const adminRoutes = require("./routes/admin");
 
 const adminButtonRoutes = require("./routes/admin.button.routes.js");
 
+const adminContabilidadRoutes = require("./routes/admin.contabilidad.routes.js")
+
 
 // Creamos el servidor y permitimos que entienda json en el body
 const app = express();
@@ -39,6 +41,7 @@ app.use("/api/admin", adminRoutes);
 
 app.use("/admin", adminButtonRoutes);
 
+app.use("/api/admin", adminContabilidadRoutes)
 
 
 // Probamos el servidor
