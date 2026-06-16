@@ -145,12 +145,12 @@ async function cerrarCategoria({
  * Both writes use merge for idempotency.
  *
  * @param {string} mesAnio — e.g. "Enero 2026"
- * @param {string} adminUid — Firebase UID of the admin who triggered the close
+ * @param {object} admin — { uid, nombre } of the admin who triggered the close
  * @param {object} snapshot — the Historico_Mensual snapshot (totalProductos, cartonesVendidos)
  * @param {Array} ganancias — array of per-category earnings results
  * @returns {Promise<void>}
  */
-async function registrarCierre(mesAnio, adminUid, snapshot, ganancias) {
+async function registrarCierre(mesAnio, admin, snapshot, ganancias) {
   const categorias = snapshot
     ? Object.keys(snapshot.totalProductos || {})
     : [];
@@ -158,7 +158,8 @@ async function registrarCierre(mesAnio, adminUid, snapshot, ganancias) {
   // Consolidated write to Cierres_contables/{mesAnio}
   await adminRepo.setCierreContable(mesAnio, "consolidado", {
     mesAnio,
-    ejecutadoPor: adminUid,
+    ejecutadoPor: admin.uid,
+    usuario: admin.nombre,
     fechaCierre: new Date(),
     resumen: {
       categorias,
@@ -171,7 +172,7 @@ async function registrarCierre(mesAnio, adminUid, snapshot, ganancias) {
   await adminRepo.setAdminAction(mesAnio, "cierre_mensual", {
     accion: "cierre_mensual",
     mesAnio,
-    usuario: adminUid,
+    usuario: admin.nombre || admin.uid,
     fecha: new Date(),
     resumen: {
       categorias,
@@ -179,7 +180,7 @@ async function registrarCierre(mesAnio, adminUid, snapshot, ganancias) {
     },
   });
 
-  console.log(`📝 Cierre registrado: ${mesAnio} por ${adminUid}`);
+  console.log(`📝 Cierre registrado: ${mesAnio} por ${admin.nombre || admin.uid}`);
 }
 
 module.exports = {

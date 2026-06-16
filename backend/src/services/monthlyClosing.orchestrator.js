@@ -19,15 +19,15 @@ const adminActionsService = require("./admin.actions.service");
  * for the same mesAnio overwrites data safely.
  *
  * @param {string} mesAnio — e.g. "Enero 2026"
- * @param {string} adminUid — Firebase Auth UID of the admin triggering the close
+ * @param {object} admin — { uid, nombre } of the admin triggering the close
  * @returns {Promise<{ mesAnio: string, snapshot: object, ganancias: object[], audit: void }>}
  */
-async function cerrarMes(mesAnio, adminUid) {
+async function cerrarMes(mesAnio, admin) {
   if (!mesAnio) {
     throw new Error("mesAnio es obligatorio");
   }
 
-  console.log(`🏁 Iniciando cierre mensual: ${mesAnio} por ${adminUid}`);
+  console.log(`🏁 Iniciando cierre mensual: ${mesAnio} por ${admin.nombre || admin.uid}`);
 
   // ──────────────────────────────────────────────────
   // Stage 1: Process pending orders
@@ -47,7 +47,7 @@ async function cerrarMes(mesAnio, adminUid) {
   let snapshot;
   try {
     console.log("📸 Stage 2/4: Generando histórico mensual...");
-    snapshot = await contabilidadService.generarHistoricoMensual(mesAnio, adminUid);
+    snapshot = await contabilidadService.generarHistoricoMensual(mesAnio, admin);
     console.log("✅ Stage 2/4: Histórico mensual generado");
   } catch (error) {
     console.error(`❌ Stage 2/4 (generarHistoricoMensual) falló: ${error.message}`);
@@ -80,7 +80,7 @@ async function cerrarMes(mesAnio, adminUid) {
   // ──────────────────────────────────────────────────
   try {
     console.log("📝 Stage 4/4: Registrando cierre...");
-    await adminActionsService.registrarCierre(mesAnio, adminUid, snapshot, ganancias);
+    await adminActionsService.registrarCierre(mesAnio, admin, snapshot, ganancias);
     console.log("✅ Stage 4/4: Cierre registrado");
   } catch (error) {
     console.error(`❌ Stage 4/4 (registrarCierre) falló: ${error.message}`);

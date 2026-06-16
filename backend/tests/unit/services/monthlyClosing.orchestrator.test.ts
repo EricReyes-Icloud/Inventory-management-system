@@ -12,6 +12,8 @@ const projectRoot = process.cwd();
 
 let orchestrator: any;
 
+const adminMock = { uid: "admin-1", nombre: "Admin Test" };
+
 // Mock dependencies
 const mockProcessPendingOrders = vi.fn();
 const mockGenerarHistoricoMensual = vi.fn();
@@ -92,19 +94,19 @@ describe("monthlyClosing.orchestrator", () => {
 
   describe("cerrarMes", () => {
     it("lanza error si mesAnio es undefined", async () => {
-      await expect(orchestrator.cerrarMes(undefined, "admin-1")).rejects.toThrow(
+      await expect(orchestrator.cerrarMes(undefined, adminMock)).rejects.toThrow(
         "mesAnio es obligatorio"
       );
     });
 
     it("lanza error si mesAnio es null", async () => {
-      await expect(orchestrator.cerrarMes(null, "admin-1")).rejects.toThrow(
+      await expect(orchestrator.cerrarMes(null, adminMock)).rejects.toThrow(
         "mesAnio es obligatorio"
       );
     });
 
     it("lanza error si mesAnio es string vacío", async () => {
-      await expect(orchestrator.cerrarMes("", "admin-1")).rejects.toThrow(
+      await expect(orchestrator.cerrarMes("", adminMock)).rejects.toThrow(
         "mesAnio es obligatorio"
       );
     });
@@ -135,7 +137,7 @@ describe("monthlyClosing.orchestrator", () => {
         .mockResolvedValueOnce({ categoria: "Otra", gananciaNeta: 1000 });
       mockRegistrarCierre.mockResolvedValue(undefined);
 
-      const result = await orchestrator.cerrarMes("Enero 2026", "admin-1");
+      const result = await orchestrator.cerrarMes("Enero 2026", adminMock);
 
       // Verify stage order
       expect(mockProcessPendingOrders).toHaveBeenCalledOnce();
@@ -151,7 +153,7 @@ describe("monthlyClosing.orchestrator", () => {
       });
       expect(mockRegistrarCierre).toHaveBeenCalledWith(
         "Enero 2026",
-        "admin-1",
+        adminMock,
         fakeSnapshot,
         [
           { categoria: "Test", gananciaNeta: 500 },
@@ -184,7 +186,7 @@ describe("monthlyClosing.orchestrator", () => {
       );
 
       await expect(
-        orchestrator.cerrarMes("Enero 2026", "admin-1")
+        orchestrator.cerrarMes("Enero 2026", adminMock)
       ).rejects.toThrow("Error en etapa 2 (generar histórico): El histórico ya fue generado");
 
       expect(mockProcessPendingOrders).toHaveBeenCalledOnce();
@@ -213,7 +215,7 @@ describe("monthlyClosing.orchestrator", () => {
       );
 
       await expect(
-        orchestrator.cerrarMes("Enero 2026", "admin-1")
+        orchestrator.cerrarMes("Enero 2026", adminMock)
       ).rejects.toThrow("Error en etapa 3 (calcular ganancias): No existen costos variables");
 
       expect(mockProcessPendingOrders).toHaveBeenCalledOnce();
@@ -244,11 +246,11 @@ describe("monthlyClosing.orchestrator", () => {
       mockRegistrarCierre.mockResolvedValue(undefined);
 
       // First run
-      const first = await orchestrator.cerrarMes("Enero 2026", "admin-1");
+      const first = await orchestrator.cerrarMes("Enero 2026", adminMock);
       expect(first.snapshot).toEqual(fakeSnapshot);
 
       // Second run (idempotent)
-      const second = await orchestrator.cerrarMes("Enero 2026", "admin-1");
+      const second = await orchestrator.cerrarMes("Enero 2026", adminMock);
       expect(second.snapshot).toEqual(fakeSnapshot);
 
       // All stages called twice
