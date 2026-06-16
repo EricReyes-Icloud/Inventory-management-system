@@ -74,6 +74,42 @@ The service SHALL export exactly `{ cerrarGananciasPorCategoria }`. The non-exis
 - THEN only `cerrarGananciasPorCategoria` SHALL be exported
 - AND `calcularGananciasInterno` SHALL NOT exist
 
+### Requirement: Cost Value Validation Threshold
+
+The system MUST validate that ALL individual cost values in `costos_fijos` and `costos_variables` are strictly greater than zero. The validation SHALL reject values where `v <= 0` (zero or negative). This replaces the previous threshold of `v < 0` which incorrectly allowed zero values.
+
+#### Scenario: Zero fixed or variable cost is rejected
+
+- GIVEN a `costos_fijos` or `costos_variables` document has a field with value `0`
+- WHEN `cerrarGananciasPorCategoria(mesAnio)` executes the cost loop validation
+- THEN the service MUST throw a validation error
+- AND earnings calculation SHALL NOT proceed
+
+#### Scenario: Negative cost is rejected
+
+- GIVEN a `costos_fijos` or `costos_variables` document has a field with a negative value
+- WHEN `cerrarGananciasPorCategoria(mesAnio)` executes the cost loop validation
+- THEN the service MUST throw a validation error
+- AND earnings calculation SHALL NOT proceed
+
+#### Scenario: All-positive costs pass validation
+
+- GIVEN ALL field values in both `costos_fijos` and `costos_variables` are positive numbers (> 0)
+- WHEN `cerrarGananciasPorCategoria(mesAnio)` executes the cost loop validation
+- THEN the validation SHALL pass
+- AND earnings calculation SHALL continue to completion
+
+### Requirement: Variable Costs Are Period Costs (Not Multiplied)
+
+The system MUST treat variable costs as direct period costs. Variable costs from `costos_variables` documents SHALL be summed directly as total costs for the period, and SHALL NOT be multiplied by the quantity of cartons or any other multiplicative factor.
+
+#### Scenario: Variable costs summed as period total
+
+- GIVEN `costos_variables` returns `{ Frascos: 50, Botellas: 30, Copas: 20 }` (costs per product type)
+- WHEN earnings calculation processes variable costs
+- THEN the total variable cost SHALL be `50 + 30 + 20 = 100` (direct sum)
+- AND the result SHALL NOT multiply any of these values by carton quantities
+
 ## REMOVED Requirements
 
 None.

@@ -87,7 +87,7 @@ router.post(
         });
       }
 
-      const resultado = await orchestrator.cerrarMes(mesAnio, req.admin.uid);
+      const resultado = await orchestrator.cerrarMes(mesAnio, req.admin);
 
       return res.status(200).json({
         ok: true,

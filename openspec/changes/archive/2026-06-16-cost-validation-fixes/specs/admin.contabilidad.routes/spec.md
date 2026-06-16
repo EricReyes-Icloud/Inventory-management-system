@@ -25,7 +25,4 @@ The route handler SHALL call `monthlyClosing.orchestrator.cerrarMes(mesAnio, req
 
 ## REMOVED Requirements
 
-### Requirement: cierreMensual Import
-
-(Reason: The import `const { cerrarMesContable } = require("../services/cierreMensual.service")` is removed along with the file it references.)
-(Migration: Replace with `const orchestrator = require("../services/monthlyClosing.orchestrator")`.)
+None.

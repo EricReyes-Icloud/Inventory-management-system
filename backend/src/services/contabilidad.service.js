@@ -11,10 +11,10 @@ const contabilidadRepo = require("../repositories/contabilidad.repository");
  * Idempotent: overwrites on re-run (no existence guard).
  *
  * @param {string} mesAnio — e.g. "Enero 2026"
- * @param {string} adminUid — Firebase UID of the admin who triggered the close
+ * @param {object} admin — { uid, nombre } of the admin who triggered the close
  * @returns {Promise<object>} — the generated snapshot
  */
-async function generarHistoricoMensual(mesAnio, adminUid) {
+async function generarHistoricoMensual(mesAnio, admin) {
   const totalProductos = {};
   const cartonesVendidos = {};
 
@@ -63,7 +63,8 @@ async function generarHistoricoMensual(mesAnio, adminUid) {
     cartonesVendidos,
     estado: "cerrado",
     generadoEn: new Date(),
-    generadoPor: adminUid,
+    generadoPor: admin.uid,
+    usuario: admin.nombre,
   });
 
   return { totalProductos, cartonesVendidos };

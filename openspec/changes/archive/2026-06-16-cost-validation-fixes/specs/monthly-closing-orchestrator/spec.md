@@ -1,14 +1,12 @@
-# Monthly Closing Orchestrator Specification
+# Delta for monthly-closing-orchestrator
 
-## Purpose
-
-The monthly-closing orchestrator provides a single `cerrarMes(mesAnio, admin)` entry point that coordinates the 4-stage pipeline: process pending orders → snapshot earnings → calculate per-category gains → record audit trail. It makes the closing flow idempotent and recoverable by re-execution. The `admin` object carries both `uid` and `nombre` to enable proper audit trail with human-readable admin names.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Pipeline Entry Point
 
 The system MUST expose `cerrarMes(mesAnio, admin)` as the sole entry point for admin-triggered month closing. `mesAnio` SHALL be a string like `"Enero 2026"`. `admin` SHALL be an object with at minimum `{ uid, nombre }` where `uid` is the Firebase Auth UID and `nombre` is the human-readable admin display name.
+
+(Previously: Exposed `cerrarMes(mesAnio, adminUid)` where `adminUid` was a string)
 
 #### Scenario: Happy path — full pipeline with admin nombre in audit
 
@@ -26,7 +24,7 @@ The system MUST expose `cerrarMes(mesAnio, admin)` as the sole entry point for a
 
 ### Requirement: Pipeline Ordering
 
-The orchestrator MUST execute stages in strict sequence: (1) process pending orders via `jobContableMensual.processPendingOrders()`, (2) `contabilidadService.generarHistoricoMensual(mesAnio, admin.uid)`, (3) `gananciasService.cerrarGananciasPorCategoria(mesAnio)`, (4) `adminActionsService.registrarCierre(mesAnio, admin, snapshot, ganancias)`. The orchestrator SHALL additionally extract `admin.nombre` and pass it to stage 4 for storage as the audit trail field `generadoPor`. Each stage SHALL await the previous one before starting.
+The orchestrator MUST execute stages in strict sequence: (1) process pending orders via `jobContableMensual.processPendingOrders()`, (2) `contabilidadService.generarHistoricoMensual(mesAnio, admin.uid)`, (3) `gananciasService.cerrarGananciasPorCategoria(mesAnio)`, (4) `adminActionsService.registrarCierre(mesAnio, admin.uid, snapshot, ganancias)`. The orchestrator SHALL additionally extract `admin.nombre` and pass it to stage 4 for storage as the audit trail field `generadoPor`. Each stage SHALL await the previous one before starting.
 
 (Previously: Stages 2 and 4 used a plain `adminUid` string. Stage 4 did not receive `admin.nombre`.)
 
@@ -52,21 +50,6 @@ The orchestrator MUST be safe to re-run for the same `mesAnio`. Re-execution SHA
 - AND the audit record's `generadoPor` SHALL be updated to `currentAdmin.nombre`
 - AND no duplicate audit records SHALL be created (merge-set)
 
-### Requirement: Error Handling
+## REMOVED Requirements
 
-If any stage throws, the orchestrator MUST catch the error, log the failed stage, and re-throw a descriptive error. The caller SHALL receive a clear failure message. Partial writes from a failed stage SHALL be recoverable by re-running `cerrarMes` for the same `mesAnio`.
-
-#### Scenario: Snapshot stage fails
-
-- GIVEN `contabilidadService.generarHistoricoMensual` throws
-- WHEN the orchestrator catches it
-- THEN the error SHALL be logged with stage identifier `"snapshot"`
-- AND the error SHALL be re-thrown with the original message
-- AND earnings/audit stages SHALL NOT execute
-
-#### Scenario: Re-run recovers from partial failure
-
-- GIVEN the pipeline failed at stage 3 after stage 2 wrote a snapshot
-- WHEN the admin re-invokes `cerrarMes(mesAnio, admin)`
-- THEN stages 1-2 SHALL succeed again (idempotent)
-- AND stage 3 SHALL recalculate earnings from the (possibly updated) snapshot
+None.

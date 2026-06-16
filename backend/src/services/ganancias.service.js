@@ -67,7 +67,7 @@ async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
   let costosFijosUnit = 0;
 
   for (const v of Object.values(costosFijosData)) {
-    if (typeof v !== "number" || v < 0) {
+    if (typeof v !== "number" || v <= 0) {
       throw new Error(`Costo fijo inválido para ${categoria}`);
     }
     costosFijosUnit += v;
@@ -89,7 +89,7 @@ async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
 
       if (cartonesProducto <= 0) continue;
 
-      let costoUnitProducto = costosFijosUnit;
+      let inversionProducto = costosFijosUnit * cartonesProducto;
 
       // Validate variable costs per product uniformly — throw if missing
       if (["Frascos", "Botellas", "Copas"].includes(nombreProducto)) {
@@ -108,17 +108,17 @@ async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
         let sumaVar = 0;
 
         for (const v of Object.values(dataVar)) {
-          if (typeof v === "number" && v > 0) {
-            sumaVar += v;
+          if (typeof v !== "number" || v <= 0) {
+            throw new Error(`Costo variable inválido para ${nombreProducto} en categoria Miel`);
           }
+          sumaVar += v;
         }
 
-        costoUnitProducto += sumaVar;
+        inversionProducto += sumaVar;
         costosVariablesUnit += sumaVar;
         costosVariablesData = { ...costosVariablesData, ...dataVar };
       }
 
-      const inversionProducto = costoUnitProducto * cartonesProducto;
       inversionTotal += inversionProducto;
     }
   } else {
@@ -132,14 +132,13 @@ async function cerrarGananciasPorCategoria({ mesAnio, categoria }) {
     costosVariablesData = costosVariablesSnap.data() || {};
 
     for (const v of Object.values(costosVariablesData)) {
-      if (typeof v !== "number" || v < 0) {
+      if (typeof v !== "number" || v <= 0) {
         throw new Error(`Costo variable inválido para ${categoria}`);
       }
       costosVariablesUnit += v;
     }
 
-    const inversionUnit = costosFijosUnit + costosVariablesUnit;
-    inversionTotal = inversionUnit * cartonesTotal;
+    inversionTotal = costosFijosUnit * cartonesTotal + costosVariablesUnit;
   }
 
   // ────────────────────
