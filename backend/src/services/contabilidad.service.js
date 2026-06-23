@@ -15,6 +15,19 @@ const contabilidadRepo = require("../repositories/contabilidad.repository");
  * @returns {Promise<object>} — the generated snapshot
  */
 async function generarHistoricoMensual(mesAnio, admin) {
+  // ── Validation guards ──────────────────────────────────────────
+  if (!admin || !admin.uid) {
+    throw new Error("admin.uid es obligatorio");
+  }
+  if (!admin || !admin.nombre) {
+    throw new Error("admin.nombre es obligatorio");
+  }
+
+  const existente = await contabilidadRepo.getHistoricoMensual(mesAnio);
+  if (existente) {
+    throw new Error(`El histórico para ${mesAnio} ya fue generado`);
+  }
+
   const totalProductos = {};
   const cartonesVendidos = {};
 
