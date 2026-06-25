@@ -192,4 +192,199 @@ describe("contabilidad.repository", () => {
       expect(mockBatch.commit).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ═══════════════════════════════════════════
+  // buildOperacionesContables — Batch Construction
+  // ═══════════════════════════════════════════
+
+  describe("buildOperacionesContables", () => {
+    it("throws on empty or non-array items", () => {
+      expect(() =>
+        contabilidadRepo.buildOperacionesContables([], new Date())
+      ).toThrow("Items inv\u00e1lidos para contabilidad");
+
+      expect(() =>
+        contabilidadRepo.buildOperacionesContables("string", new Date())
+      ).toThrow("Items inv\u00e1lidos para contabilidad");
+    });
+
+    it("throws on invalid, undefined, or null fechaPedido", () => {
+      const items = [
+        { nombre: "Miel * 100", subtotal: 1500, cantidad: 5 },
+      ];
+
+      expect(() =>
+        contabilidadRepo.buildOperacionesContables(items, "not-a-date")
+      ).toThrow("fechaPedido inv\u00e1lida");
+
+      expect(() =>
+        contabilidadRepo.buildOperacionesContables(items, undefined)
+      ).toThrow("fechaPedido inv\u00e1lida");
+
+      expect(() =>
+        contabilidadRepo.buildOperacionesContables(items, null)
+      ).toThrow("fechaPedido inv\u00e1lida");
+    });
+
+    it("builds all 20 ops for 3 categorized items", () => {
+      const items = [
+        { nombre: "Miel * 100", subtotal: 1500, cantidad: 5 },
+        { nombre: "Canela * 100 peque\u00f1a", subtotal: 2000, cantidad: 3 },
+        { nombre: "Clavo * 100", subtotal: 800, cantidad: 2 },
+      ];
+
+      const result = contabilidadRepo.buildOperacionesContables(
+        items,
+        new Date("2026-01-15")
+      );
+
+      expect(result).toHaveLength(20);
+
+      // First 2 ops are main document references
+      expect(result[0].ref).toContain("Total Productos/Enero 2026");
+      expect(result[1].ref).toContain("Cartones_vendidos/Enero 2026");
+
+      // Every operation has data and merge: true
+      result.forEach((op) => {
+        expect(op).toHaveProperty("data");
+        expect(op.options).toEqual({ merge: true });
+      });
+    });
+
+    it("uses FieldValue.increment with correct values for totals", () => {
+      const items = [
+        { nombre: "Miel * 100", subtotal: 1500, cantidad: 5 },
+      ];
+
+      const result = contabilidadRepo.buildOperacionesContables(
+        items,
+        new Date("2026-01-15")
+      );
+
+      expect(result).toHaveLength(8);
+
+      // ── Dinero (subtotal=1500) ──
+      // Op 2: producto/Miel → data.total: increment(1500)
+      expect(result[2].data.total).toEqual({ __increment: 1500 });
+      // Op 3: producto/Miel/skus → data.total: increment(1500)
+      expect(result[3].data.total).toEqual({ __increment: 1500 });
+      // Op 4: Total Productos main → data.totalGeneral: increment(1500)
+      expect(result[4].data.totalGeneral).toEqual({ __increment: 1500 });
+
+      // ── Cartones (cantidad=5) ──
+      // Op 5: cartones/producto/Miel → data.total: increment(5)
+      expect(result[5].data.total).toEqual({ __increment: 5 });
+      // Op 6: cartones/producto/Miel/skus → data.total: increment(5)
+      expect(result[6].data.total).toEqual({ __increment: 5 });
+      // Op 7: Cartones_vendidos main → data.totalGeneral: increment(5)
+      expect(result[7].data.totalGeneral).toEqual({ __increment: 5 });
+    });
+
+    it("skips items without a matching category", () => {
+      const items = [
+        { nombre: "Miel * 100", subtotal: 1500, cantidad: 5 },
+        { nombre: "Producto Inexistente", subtotal: 500, cantidad: 2 },
+      ];
+
+      const result = contabilidadRepo.buildOperacionesContables(
+        items,
+        new Date("2026-01-15")
+      );
+
+      // 2 main docs + 6 for Miel = 8 ops, no ops for uncategorized item
+      expect(result).toHaveLength(8);
+
+      // No operation references the uncategorized product
+      result.forEach((op) => {
+        expect(op.ref).not.toContain("Producto Inexistente");
+      });
+    });
+
+    it("includes serverTimestamp on main document ops", () => {
+      const items = [
+        { nombre: "Miel * 100", subtotal: 1500, cantidad: 5 },
+      ];
+
+      const result = contabilidadRepo.buildOperacionesContables(
+        items,
+        new Date("2026-01-15")
+      );
+
+      // First 2 ops are main documents
+      expect(result[0].data.actualizadoEn).toEqual({
+        __serverTimestamp: true,
+      });
+      expect(result[1].data.actualizadoEn).toEqual({
+        __serverTimestamp: true,
+      });
+    });
+  });
+
+  // ═══════════════════════════════════════════
+  // limpiarCategoria — Category Cleanup
+  // ═══════════════════════════════════════════
+
+  describe("limpiarCategoria", () => {
+    it("limpiarCategoriaTotal deletes SKUs and resets total", async () => {
+      const skusDocs = [
+        { ref: mockDocRef, data: () => ({ total: 100 }) },
+        { ref: mockDocRef, data: () => ({ total: 50 }) },
+      ];
+      const mockSkusSnap = buildMockQuerySnap(skusDocs);
+
+      // Override collection mock so .collection("skus").get() returns the snapshot
+      mockDocRef.collection = vi.fn(() => ({
+        doc: vi.fn(() => mockDocRef),
+        get: vi.fn().mockResolvedValue(mockSkusSnap),
+      }));
+
+      await contabilidadRepo.limpiarCategoriaTotal("Enero 2026", "Miel");
+
+      expect(mockBatch.delete).toHaveBeenCalledTimes(2);
+      expect(mockBatch.set).toHaveBeenCalledWith(
+        mockDocRef,
+        { total: 0, actualizadoEn: expect.any(Date) },
+        { merge: true }
+      );
+      expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+    });
+
+    it("limpiarCategoriaTotal handles empty category", async () => {
+      const mockEmptySnap = buildMockQuerySnap([]);
+
+      mockDocRef.collection = vi.fn(() => ({
+        doc: vi.fn(() => mockDocRef),
+        get: vi.fn().mockResolvedValue(mockEmptySnap),
+      }));
+
+      await contabilidadRepo.limpiarCategoriaTotal("Enero 2026", "Miel");
+
+      expect(mockBatch.delete).not.toHaveBeenCalled();
+      expect(mockBatch.set).toHaveBeenCalledTimes(1);
+      expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+    });
+
+    it("limpiarCategoriaCartones deletes SKUs and resets total", async () => {
+      const skusDocs = [
+        { ref: mockDocRef, data: () => ({ total: 100 }) },
+        { ref: mockDocRef, data: () => ({ total: 50 }) },
+      ];
+      const mockSkusSnap = buildMockQuerySnap(skusDocs);
+
+      mockDocRef.collection = vi.fn(() => ({
+        doc: vi.fn(() => mockDocRef),
+        get: vi.fn().mockResolvedValue(mockSkusSnap),
+      }));
+
+      await contabilidadRepo.limpiarCategoriaCartones("Enero 2026", "Miel");
+
+      expect(mockBatch.delete).toHaveBeenCalledTimes(2);
+      expect(mockBatch.set).toHaveBeenCalledWith(
+        mockDocRef,
+        { total: 0, actualizadoEn: expect.any(Date) },
+        { merge: true }
+      );
+      expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+    });
+  });
 });
