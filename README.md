@@ -135,6 +135,9 @@ El proyecto incluye testing automatizado para validar reglas de negocio crítica
 
 - Vitest
 
+### Estado
+
+- En desarrollo activo, unit test e integration test cubren los casos principales del sistema, sin embargo, aún se encuentran en pruebas de validación con referencia a las reglas de negocio.
 ---
 
 ## Deployment
@@ -163,16 +166,16 @@ Este proyecto incorpora integración estratégica de inteligencia artificial com
 ### Uso de IA en el proyecto
 
 - Arquitectura asistida por IA.
-- Automatización de testing.
+- Automatización e implementación de testing.
 - Generación de documentación técnica.
-- Soporte para agentes IA mediante `AGENTS.md`.
+- Soporte y configuración para agentes de IA mediante `AGENTS.md`.
 - Integración profesional con OpenCode.
 
 ### Filosofía
 
 La IA es utilizada como herramienta de productividad y aceleración técnica, mientras que las decisiones arquitectónicas, validaciones y dirección del proyecto son realizadas manualmente.
 
-El objetivo es hacer uso de un enfoque moderno de desarrollo dirigido por especificaciones donde el desarrollador lidera y supervisa el uso de IA dentro de un ecosistema profesional.
+El objetivo es hacer uso de un enfoque moderno de desarrollo dirigido por especificaciones donde el desarrollador lidera y supervisa el uso de la IA dentro de un ecosistema profesional.
 
 ---
 
@@ -200,8 +203,11 @@ Actualmente el proyecto continúa evolucionando en:
 - Arquitectura.
 - Testing.
 - Automatización.
-- Integración con IA.
-- Experiencia de usuario.
+- Flujo de datos consistente.
+- Base principal del sistema.
+- Integridad de los datos.
+- Aceleración del desarrollo con IA.
+
 
 ---
 
