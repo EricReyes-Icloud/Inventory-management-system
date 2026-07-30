@@ -159,7 +159,7 @@ El proyecto está diseñado para despliegue cloud-based.
 
 ---
 
-## Desarrollado asistido por IA
+## Desarrollo asistido por IA
 
 Este proyecto incorpora integración estratégica de inteligencia artificial como parte del flujo de desarrollo.
 
