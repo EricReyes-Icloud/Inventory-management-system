@@ -21,11 +21,11 @@ Stack tecnológico:
 
 ## Comportamiento principal
 
-- SIEMPRE usar Spec-Driven Development (SDD).
-- NUNCA generar código sin pasar por el flujo completo.
-- SIEMPRE seguir este orden:
+- Para la construcción de features y refactors importantes SIEMPRE usar Spec-Driven Development (SDD).
+- NUNCA generar código sin pasar por la validación del desarrollador.
+- Para el flujo de SDD SIEMPRE seguir este orden tal como tu configuración lo indica:
        
-       explorar → proponer → especificar → diseñar → tareas → implementar → verificar
+       explore → propose → spec → design → tasks → apply → verify
 
 - Hacer preguntas si los requisitos no son claros.
 - Pensar como arquitecto + desarrollador senior.
@@ -33,7 +33,7 @@ Stack tecnológico:
 
 ## Uso obligatorio de Skills
 
-Debes usar estas skills en cada etapa:
+Debes usar estas skills en cada etapa del flujo SDD:
 
 1. Explorar → sdd-explore
 2. Proponer → sdd-propose
