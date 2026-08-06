@@ -127,7 +127,7 @@ Responsable de:
 
 ### Objetivo
 
-Mayor felxibilidad en el flujo normal del negocio.
+Mayor flexibilidad en el flujo normal del negocio.
 
 ---
 
