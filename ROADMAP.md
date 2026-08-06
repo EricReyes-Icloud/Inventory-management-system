@@ -442,7 +442,7 @@ Se planean mejoras orientadas a:
 
 ## Trabajos previstos
 
-Después de completar testing y refactorización:
+Después de completar testing y refactorización se planea realizar los siguientes procesos:
 
 - Cierre mensual administrativo
 - Validaciones completas
