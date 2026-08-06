@@ -133,7 +133,7 @@ Todas las Pull Requests siguen una estructura estandarizada.
 
 ## Estructura de PR requerida
 
-## 1. Descripción
+## 1. Description (Descripción)
 
 Describe:
 
