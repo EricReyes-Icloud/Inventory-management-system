@@ -12,12 +12,13 @@ El objetivo principal es ofrecer una solución de gestión de inventario robusta
 ---
 
 ## 2. Arquitectura General
-
+```
 Frontend (React)
         ↓
 Backend API (Node.js + Express.js)
         ↓
 Firebase Firestore (Base de datos en la nube)
+```
 
 El frontend consume la API REST del backend.
 El backend contiene toda la lógica de negocio.
