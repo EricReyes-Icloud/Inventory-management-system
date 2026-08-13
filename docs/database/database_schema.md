@@ -312,7 +312,7 @@ Las ventas afectan directamente:
 Total Productos
 ```
 
-mediante a suma de totales vendidos.
+mediante suma de totales vendidos.
 
 ---
 
@@ -324,7 +324,7 @@ Cada pedido procesado impacta:
 Ganancias/{mesAnio}
 ```
 
-mediante actualización financiera por medio de Total Productos.
+mediante actualización financiera por medio de Total Productos con autorización Admin.
 
 ---
 
