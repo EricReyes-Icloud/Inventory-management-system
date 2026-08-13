@@ -110,7 +110,7 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 ---
 
 ### Git & Workflow
-- Implementación de flujo Git basado en:
+- Implementación de GitFlow basado en:
   - `main`
   - `develop`
   - `feature/*`
