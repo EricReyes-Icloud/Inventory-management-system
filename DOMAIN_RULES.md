@@ -372,7 +372,7 @@ Errores parciales no deben dejar información inconsistente.
 
 ---
 
-## Reglas de seguridad
+## Normas de seguridad
 
 ---
 
@@ -452,7 +452,7 @@ El testing debe proteger el sistema contra regresiones funcionales.
 
 ---
 
-## Reglas de Escalabilidad
+## Normas de Escalabilidad
 
 ## Regla: la lógica de negocio debe seguir siendo modular
 
@@ -515,7 +515,7 @@ Toda operación financiera y operativa debe mantener trazabilidad histórica.
 
 ## Descripción
 
-Los agentes IA y módulos NLP no pueden persistir información sin pasar validaciones del negocio.
+Los agentes de IA y módulos NLP no pueden persistir información sin pasar validaciones del negocio.
 
 ---
 
