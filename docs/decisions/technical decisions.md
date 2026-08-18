@@ -71,7 +71,7 @@ Se priorizó eficiencia de lectura sobre normalización estricta.
 
 ---
 
-### 6. Cálculo de Ganancias solo con aprovacion
+### 6. Cálculo de Ganancias solo con aprobación
 
 Las ganancias se calculan y almacenan en el documento Ganancias, solo cuando se aprueba el proceso de cierre.
 
