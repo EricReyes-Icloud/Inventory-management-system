@@ -1,4 +1,4 @@
-# Testing Strategy 
+# Estrategia de Testing
 
 ## Objetivo
 
