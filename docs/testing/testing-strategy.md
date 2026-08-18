@@ -56,7 +56,7 @@ Clasificación robusta de productos basada en lenguaje natural
 
 ## 1. Single Source of Truth
 
-- `normalizarTexto` centralizada en:
+- `normalizarTexto` centralizada en: `/utils`
 - Eliminación de funciones duplicadas en services
 
 ---
