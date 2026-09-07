@@ -8,7 +8,9 @@ declare module "module" {
   }
 }
 
-const projectRoot = process.cwd();
+import { getBackendRoot } from "../../helpers/paths";
+
+const projectRoot = getBackendRoot();
 
 // Mock repository functions
 const mockGetHistoricoMensual = vi.fn();
@@ -187,14 +189,14 @@ describe("ganancias.service", () => {
 
       // ventaTotal = 10000, cartones = 100
       // costosFijosUnit = 50, costosVariablesUnit = 15
-      // inversionUnit = 65, inversionTotal = 65 * 100 = 6500
-      // gananciaNeta = 10000 - 6500 = 3500
+      // inversionTotal = fijos*cartones + variables = 50*100 + 15 = 5015
+      // gananciaNeta = 10000 - 5015 = 4985
       expect(result.ventaTotal).toBe(10000);
       expect(result.cartones).toBe(100);
       expect(result.costosFijosUnit).toBe(50);
       expect(result.costosVariablesUnit).toBe(15);
-      expect(result.inversionTotal).toBe(6500);
-      expect(result.gananciaNeta).toBe(3500);
+      expect(result.inversionTotal).toBe(5015);
+      expect(result.gananciaNeta).toBe(4985);
       expect(result.estado).toBe("cerrado");
 
       // Verify writes
@@ -291,18 +293,19 @@ describe("ganancias.service", () => {
 
       // ventaTotal = 15000, cartones = 150
       // costosFijosUnit = 40
-      // Frascos: (40 + 50) * 80 = 7200
-      // Botellas: (40 + 15) * 50 = 2750
-      // Copas: (40 + 10) * 20 = 1000
-      // inversionTotal = 7200 + 2750 + 1000 = 10950
-      // gananciaNeta = 15000 - 10950 = 4050
+      // Per-product formula: fijos*cartonesProducto + variables
+      // Frascos: 40*80 + 50 = 3250
+      // Botellas: 40*50 + 15 = 2015
+      // Copas: 40*20 + 10 = 810
+      // inversionTotal = 3250 + 2015 + 810 = 6075
+      // gananciaNeta = 15000 - 6075 = 8925
       // costosVariablesUnit = 50 + 15 + 10 = 75
       expect(result.ventaTotal).toBe(15000);
       expect(result.cartones).toBe(150);
       expect(result.costosFijosUnit).toBe(40);
       expect(result.costosVariablesUnit).toBe(75);
-      expect(result.inversionTotal).toBe(10950);
-      expect(result.gananciaNeta).toBe(4050);
+      expect(result.inversionTotal).toBe(6075);
+      expect(result.gananciaNeta).toBe(8925);
       expect(result.estado).toBe("cerrado");
 
       expect(mockSetGanancias).toHaveBeenCalledOnce();

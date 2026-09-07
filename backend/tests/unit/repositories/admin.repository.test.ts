@@ -8,13 +8,16 @@ declare module "module" {
   }
 }
 
-const projectRoot = process.cwd();
+import { getBackendRoot } from "../../helpers/paths";
+
+const projectRoot = getBackendRoot();
 const firestorePath = path.resolve(projectRoot, "src/lib/firestore.js");
 
 let mockDb: any;
 let adminRepo: any;
 
 beforeEach(() => {
+  // Default mockDocRef for non-Admin paths
   const mockDocRef = {
     get: vi.fn(),
     set: vi.fn(),
@@ -24,23 +27,47 @@ beforeEach(() => {
     })),
   };
 
-  mockDb = {
-    collection: vi.fn(() => ({
+  // Default chain: db.collection("X").doc("Y").collection("Z") with .where/.get
+  const defaultQueryChain = {
+    get: vi.fn(),
+    where: vi.fn(() => ({
       get: vi.fn(),
-      doc: vi.fn(() => mockDocRef),
       where: vi.fn(() => ({
         get: vi.fn(),
         where: vi.fn(() => ({
           get: vi.fn(),
-          where: vi.fn(() => ({
-            get: vi.fn(),
-            limit: vi.fn(() => ({ get: vi.fn() })),
-          })),
           limit: vi.fn(() => ({ get: vi.fn() })),
         })),
         limit: vi.fn(() => ({ get: vi.fn() })),
       })),
+      limit: vi.fn(() => ({ get: vi.fn() })),
     })),
+  };
+
+  mockDb = {
+    collection: vi.fn((name: string) => {
+      if (name === "Usuarios") {
+        return {
+          doc: vi.fn((docName: string) => {
+            if (docName === "Usuarios") {
+              return {
+                collection: vi.fn((subName: string) => {
+                  if (subName === "Admin") {
+                    return { ...defaultQueryChain };
+                  }
+                  return { get: vi.fn(), doc: vi.fn() };
+                }),
+              };
+            }
+            return { get: vi.fn(), doc: vi.fn() };
+          }),
+        };
+      }
+      // Non-Usuarios collections: Invertir, Cierres_contables, AdminActions
+      return {
+        doc: vi.fn(() => mockDocRef),
+      };
+    }),
     doc: vi.fn(() => mockDocRef),
     _mockDocRef: mockDocRef,
   };
@@ -74,18 +101,27 @@ describe("admin.repository", () => {
       };
       const mockSnapshot = { docs: [fakeAdmin], empty: false };
 
-      // Mock: db.collection("Admin").where("Email","==",email).where("Activo","==",true).where("Rol","==","admin").limit(1).get()
-      mockDb.collection = vi.fn(() => ({
-        where: vi.fn(() => ({
-          where: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(() => ({
-                get: vi.fn().mockResolvedValue(mockSnapshot),
+      // Mock: db.collection("Usuarios").doc("Usuarios").collection("Admin").where(...)...
+      mockDb.collection = vi.fn((name: string) => {
+        if (name === "Usuarios") {
+          return {
+            doc: vi.fn(() => ({
+              collection: vi.fn(() => ({
+                where: vi.fn(() => ({
+                  where: vi.fn(() => ({
+                    where: vi.fn(() => ({
+                      limit: vi.fn(() => ({
+                        get: vi.fn().mockResolvedValue(mockSnapshot),
+                      })),
+                    })),
+                  })),
+                })),
               })),
             })),
-          })),
-        })),
-      }));
+          };
+        }
+        return { get: vi.fn(), doc: vi.fn() };
+      });
 
       const result = await adminRepo.getAdminByEmail("admin@test.com");
       expect(result.empty).toBe(false);
@@ -95,17 +131,26 @@ describe("admin.repository", () => {
     it("retorna QuerySnapshot vacío cuando el admin no existe", async () => {
       const mockSnapshot = { docs: [], empty: true };
 
-      mockDb.collection = vi.fn(() => ({
-        where: vi.fn(() => ({
-          where: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(() => ({
-                get: vi.fn().mockResolvedValue(mockSnapshot),
+      mockDb.collection = vi.fn((name: string) => {
+        if (name === "Usuarios") {
+          return {
+            doc: vi.fn(() => ({
+              collection: vi.fn(() => ({
+                where: vi.fn(() => ({
+                  where: vi.fn(() => ({
+                    where: vi.fn(() => ({
+                      limit: vi.fn(() => ({
+                        get: vi.fn().mockResolvedValue(mockSnapshot),
+                      })),
+                    })),
+                  })),
+                })),
               })),
             })),
-          })),
-        })),
-      }));
+          };
+        }
+        return { get: vi.fn(), doc: vi.fn() };
+      });
 
       const result = await adminRepo.getAdminByEmail("noexiste@test.com");
       expect(result.empty).toBe(true);
@@ -125,11 +170,20 @@ describe("admin.repository", () => {
       ];
       const mockSnapshot = { docs: fakeAdmins, empty: false };
 
-      mockDb.collection = vi.fn(() => ({
-        where: vi.fn(() => ({
-          get: vi.fn().mockResolvedValue(mockSnapshot),
-        })),
-      }));
+      mockDb.collection = vi.fn((name: string) => {
+        if (name === "Usuarios") {
+          return {
+            doc: vi.fn(() => ({
+              collection: vi.fn(() => ({
+                where: vi.fn(() => ({
+                  get: vi.fn().mockResolvedValue(mockSnapshot),
+                })),
+              })),
+            })),
+          };
+        }
+        return { get: vi.fn(), doc: vi.fn() };
+      });
 
       const result = await adminRepo.getAdminByRol("admin");
       expect(result.empty).toBe(false);
@@ -139,11 +193,20 @@ describe("admin.repository", () => {
     it("retorna QuerySnapshot vacío cuando no hay admins con ese rol", async () => {
       const mockSnapshot = { docs: [], empty: true };
 
-      mockDb.collection = vi.fn(() => ({
-        where: vi.fn(() => ({
-          get: vi.fn().mockResolvedValue(mockSnapshot),
-        })),
-      }));
+      mockDb.collection = vi.fn((name: string) => {
+        if (name === "Usuarios") {
+          return {
+            doc: vi.fn(() => ({
+              collection: vi.fn(() => ({
+                where: vi.fn(() => ({
+                  get: vi.fn().mockResolvedValue(mockSnapshot),
+                })),
+              })),
+            })),
+          };
+        }
+        return { get: vi.fn(), doc: vi.fn() };
+      });
 
       const result = await adminRepo.getAdminByRol("superadmin");
       expect(result.empty).toBe(true);

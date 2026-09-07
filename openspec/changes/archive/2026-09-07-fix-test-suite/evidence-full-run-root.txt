@@ -1,0 +1,592 @@
+
+ RUN  v4.1.2 /home/eric_reyes/projects/Inventory-management-system
+
+ ❯ backend/tests/integration/jobContable.test.ts (7 tests | 7 skipped) 45ms
+ ❯ backend/tests/unit/repositories/contabilidad.repository.test.ts (16 tests | 16 failed) 448ms
+       × returns category for matching SKU 347ms
+       × returns most specific (longest) match 4ms
+       × returns null when no match (with console.warn) 4ms
+       × handles accented and uppercased names 3ms
+       × writes all operations and commits 4ms
+       × propagates commit errors 5ms
+       × applies sets and updates then commits 4ms
+       × throws on empty or non-array items 3ms
+       × throws on invalid, undefined, or null fechaPedido 4ms
+       × builds all 20 ops for 3 categorized items 3ms
+       × uses FieldValue.increment with correct values for totals 4ms
+       × skips items without a matching category 3ms
+       × includes serverTimestamp on main document ops 15ms
+       × limpiarCategoriaTotal deletes SKUs and resets total 11ms
+       × limpiarCategoriaTotal handles empty category 12ms
+       × limpiarCategoriaCartones deletes SKUs and resets total 16ms
+stdout | backend/tests/unit/services/ganancias.service.test.ts > ganancias.service > cerrarGananciasPorCategoria > lanza error si no existen costos variables para categoria normal
+💰 Cerrando ganancias para Test (Enero 2026)
+
+stdout | backend/tests/unit/services/ganancias.service.test.ts > ganancias.service > cerrarGananciasPorCategoria > calcula ganancias correctamente para categoria normal con costos validos
+💰 Cerrando ganancias para Test (Enero 2026)
+
+stdout | backend/tests/unit/services/ganancias.service.test.ts > ganancias.service > cerrarGananciasPorCategoria > lanza error si falta costos_variables para un producto de Miel
+💰 Cerrando ganancias para Miel (Enero 2026)
+
+ ❯ backend/tests/integration/ventas.test.ts (7 tests | 3 failed) 3271ms
+       × returns 400 ningun_producto_identificado when interpretarPedido returns empty 193ms
+       × returns 400 producto_no_encontrado when a product document is missing 544ms
+       × creates a pedido and returns 200 with full response 161ms
+ ❯ backend/tests/unit/services/contabilidad.test.ts (10 tests | 6 failed) 3609ms
+     × delegates obtenerCategoria to contabilidad.repository 22ms
+     × delegates buildOperacionesContables to contabilidad.repository 5ms
+     × generates full snapshot with metadata for valid admin and mesAnio 582ms
+     × returns empty objects when no categories exist 251ms
+     × defaults SKU values to {} when category has no SKU documents 412ms
+     × propagates repository errors from getCategoriasTotalProductos 245ms
+stdout | backend/tests/unit/services/ganancias.service.test.ts > ganancias.service > cerrarGananciasPorCategoria > calcula ganancias correctamente para Miel con todos los costos presentes
+💰 Cerrando ganancias para Miel (Enero 2026)
+
+ ❯ backend/tests/unit/services/ganancias.service.test.ts (8 tests | 4 failed) 3762ms
+       × lanza error si no existen costos variables para categoria normal 169ms
+       × calcula ganancias correctamente para categoria normal con costos validos 527ms
+       × lanza error si falta costos_variables para un producto de Miel 134ms
+       × calcula ganancias correctamente para Miel con todos los costos presentes 495ms
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+🏁 Iniciando cierre mensual: Enero 2026 por Admin Test
+📋 Stage 1/4: Procesando pedidos pendientes...
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > ejecuta las 4 etapas en orden y retorna resultado
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+ ❯ backend/tests/unit/repositories/admin.repository.test.ts (10 tests | 6 failed) 5526ms
+       × retorna QuerySnapshot con docs cuando el admin existe 2289ms
+       × retorna QuerySnapshot con admins del rol especificado 356ms
+       × retorna el documento cuando existe 285ms
+       × retorna el documento cuando existe 225ms
+       × setea con merge en Cierres_contables/{mesAnio} 216ms
+       × setea con merge en AdminActions/{mesAnio} 477ms
+ ❯ backend/tests/unit/repositories/contable.repository.test.ts (15 tests | 7 failed) 6389ms
+       × retorna el documento cuando existe 1860ms
+       × retorna el documento de costos fijos cuando existe 613ms
+       × retorna el documento de costos variables cuando existe 363ms
+       × llama a set con merge en Ganancias/{mesAnio} 573ms
+       × llama a set con merge en Invertir/{categoria}/historico_compras/{mesAnio} 173ms
+       × llama a set con merge en Invertir/{categoria}/costos_variables/{producto} 487ms
+       × lee costos_variables, construye zero-map y escribe con merge 183ms
+ ❯ backend/tests/unit/repositories/ventas.repository.test.ts (12 tests | 8 failed) 6279ms
+       × retorna el cliente cuando el nombre coincide normalizado 328ms
+       × llama a set con merge 245ms
+       × retorna los meses de pedidos 430ms
+       × llama a set con merge en la subcoleccion Pedidos 325ms
+       × retorna los pedidos de un mes 333ms
+       × filtra por estadoContable pendiente 410ms
+       × crea un pedido en la subcoleccion pedidos 236ms
+       × retorna todos los documentos de Ventas 474ms
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > flujo exitoso: procesa pedido válido correctamente
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+🏁 Iniciando cierre mensual: Enero 2026 por Admin Test
+📋 Stage 1/4: Procesando pedidos pendientes...
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+✅ Stage 1/4: Pedidos pendientes procesados
+📸 Stage 2/4: Generando histórico mensual...
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 2 falla, etapas 3 y 4 no se ejecutan
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+🏁 Iniciando cierre mensual: Enero 2026 por Admin Test
+📋 Stage 1/4: Procesando pedidos pendientes...
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+✅ Stage 1/4: Pedidos pendientes procesados
+📸 Stage 2/4: Generando histórico mensual...
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > si etapa 3 falla, etapa 4 no se ejecuta
+✅ Stage 1/4: Pedidos pendientes procesados
+📸 Stage 2/4: Generando histórico mensual...
+
+ ❯ backend/tests/unit/repositories/productos.repository.test.ts (6 tests | 3 failed) 12753ms
+       × retorna el documento cuando existe 2279ms
+       × retorna productos con subcolecciones 5004ms
+       × retorna array vacío cuando no hay productos 5006ms
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+🏁 Iniciando cierre mensual: Enero 2026 por Admin Test
+📋 Stage 1/4: Procesando pedidos pendientes...
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+stdout | backend/tests/unit/services/monthlyClosing.orchestrator.test.ts > monthlyClosing.orchestrator > cerrarMes > re-ejecucion completa sin errores (idempotencia)
+✅ Stage 1/4: Pedidos pendientes procesados
+📸 Stage 2/4: Generando histórico mensual...
+
+ ❯ backend/tests/unit/services/monthlyClosing.orchestrator.test.ts (7 tests | 4 failed) 14658ms
+       × ejecuta las 4 etapas en orden y retorna resultado 5009ms
+       × si etapa 2 falla, etapas 3 y 4 no se ejecutan 5006ms
+       × si etapa 3 falla, etapa 4 no se ejecuta 2274ms
+       × re-ejecucion completa sin errores (idempotencia) 2020ms
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > garantiza atomicidad: operaciones + update en un mismo batch
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+🔄 Iniciando Job Contable
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+👤 Cliente: Edwin
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📂 Rutas encontradas para Edwin: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Edwin | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Esperanza
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📂 Rutas encontradas para Esperanza: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Esperanza | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: Hernan
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📂 Rutas encontradas para Hernan: [
+  'Abril de 2026',
+  'Febrero de 2026',
+  'Junio de 2026',
+  'Marzo de 2026'
+]
+📅 Mes: Abril de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Hernan | Abril de 2026 → pedidos pendientes: 0
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Hernan | Febrero de 2026 → pedidos pendientes: 0
+📅 Mes: Junio de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Hernan | Junio de 2026 → pedidos pendientes: 0
+📅 Mes: Marzo de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Hernan | Marzo de 2026 → pedidos pendientes: 3
+⏭ Pedido Pedido_Id1 no está pagado
+⏭ Pedido Pedido_Id2 no está pagado
+⏭ Pedido Pedido_Id3 no está pagado
+👤 Cliente: Mauricio
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📂 Rutas encontradas para Mauricio: [ 'Febrero de 2026' ]
+📅 Mes: Febrero de 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 Mauricio | Febrero de 2026 → pedidos pendientes: 0
+👤 Cliente: cliente-1
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📂 Rutas encontradas para cliente-1: [ 'Enero 2026' ]
+📅 Mes: Enero 2026
+
+stdout | backend/tests/unit/job/jobContable.rules.test.ts > jobContableMensual - rules > procesa múltiples pedidos de forma independiente
+📦 cliente-1 | Enero 2026 → pedidos pendientes: 0
+🏁 Job Contable finalizado
+✅ Procesados: 0
+❌ Fallidos: 0
+
+ ❯ backend/tests/unit/job/jobContable.rules.test.ts (11 tests | 3 failed) 29192ms
+     × flujo exitoso: procesa pedido válido correctamente 6886ms
+     × garantiza atomicidad: operaciones + update en un mismo batch 1887ms
+     × procesa múltiples pedidos de forma independiente 1867ms
+
+ Test Files  11 failed | 3 passed (14)
+      Tests  60 failed | 64 passed | 7 skipped (131)
+   Start at  15:15:18
+   Duration  29.81s (transform 1.79s, setup 0ms, import 3.21s, tests 86.18s, environment 4ms)
+

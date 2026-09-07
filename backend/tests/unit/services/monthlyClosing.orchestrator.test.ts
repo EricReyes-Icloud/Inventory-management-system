@@ -8,7 +8,9 @@ declare module "module" {
   }
 }
 
-const projectRoot = process.cwd();
+import { getBackendRoot } from "../../helpers/paths";
+
+const projectRoot = getBackendRoot();
 
 let orchestrator: any;
 
@@ -141,7 +143,7 @@ describe("monthlyClosing.orchestrator", () => {
 
       // Verify stage order
       expect(mockProcessPendingOrders).toHaveBeenCalledOnce();
-      expect(mockGenerarHistoricoMensual).toHaveBeenCalledWith("Enero 2026", "admin-1");
+      expect(mockGenerarHistoricoMensual).toHaveBeenCalledWith("Enero 2026", adminMock);
       expect(mockCerrarGananciasPorCategoria).toHaveBeenCalledTimes(2);
       expect(mockCerrarGananciasPorCategoria).toHaveBeenNthCalledWith(1, {
         mesAnio: "Enero 2026",
