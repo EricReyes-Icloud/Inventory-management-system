@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Module from "module";
 import path from "path";
 import request from "supertest";
+import { getBackendRoot } from "../helpers/paths";
 
 // Module augmentation for Module._cache
 declare module "module" {
@@ -11,7 +12,7 @@ declare module "module" {
 }
 
 // ── Paths for Module._cache injection ──
-const PROJECT_ROOT = process.cwd();
+const PROJECT_ROOT = getBackendRoot();
 const FIRESTORE_PATH = path.resolve(PROJECT_ROOT, "src/lib/firestore.js");
 const INTURIS_PATH = path.resolve(PROJECT_ROOT, "src/brain/inturis.js");
 const VENTAS_REPO_PATH = path.resolve(

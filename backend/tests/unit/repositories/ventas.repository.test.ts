@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Module from "module";
 import path from "path";
+import { getBackendRoot } from "../../helpers/paths";
 
 declare module "module" {
   interface Module {
@@ -8,7 +9,7 @@ declare module "module" {
   }
 }
 
-const projectRoot = process.cwd();
+const projectRoot = getBackendRoot();
 const firestorePath = path.resolve(projectRoot, "src/lib/firestore.js");
 
 let mockDb: any;

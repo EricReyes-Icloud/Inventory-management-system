@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import Module from "module";
 import path from "path";
+import { getBackendRoot } from "../helpers/paths";
 
 // Module augmentation for Module._cache (internal Node.js API)
 declare module "module" {
@@ -10,12 +11,9 @@ declare module "module" {
 }
 
 // ── Path constants for Module._cache injection ──
-const PROJECT_ROOT = process.cwd();
+const PROJECT_ROOT = getBackendRoot();
 const FIRESTORE_PATH = path.resolve(PROJECT_ROOT, "src/lib/firestore.js");
-const FIREBASE_FIRESTORE_PATH = path.resolve(
-  PROJECT_ROOT,
-  "node_modules/firebase-admin/lib/firestore/index.js",
-);
+const FIREBASE_FIRESTORE_PATH = require.resolve("firebase-admin/firestore");
 const VENTAS_REPO_PATH = path.resolve(
   PROJECT_ROOT,
   "src/repositories/ventas.repository.js",
@@ -197,7 +195,7 @@ beforeAll(async () => {
   delete Module._cache[CONTABILIDAD_REPO_PATH];
 
   // 5. Dynamic import — the module chain now loads with mocked deps
-  const jobModule = await import("../../../src/jobs/jobContableMensual");
+  const jobModule = await import("../../src/jobs/jobContableMensual");
   processPendingOrders = jobModule.processPendingOrders;
 }, 30000);
 

@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 
 import Module from "module";
 import path from "path";
+import { getBackendRoot } from "../../helpers/paths";
 
 // _cache es una API interna de Node.js. Extendemos el tipo para que TS no se queje.
 declare module "module" {
@@ -44,7 +45,7 @@ beforeAll(() => {
   // ================================================================
   // 2. Resolver rutas absolutas de los módulos reales
   // ================================================================
-  const projectRoot = process.cwd();
+  const projectRoot = getBackendRoot();
   const firestorePath = path.resolve(projectRoot, "src/lib/firestore.js");
   const contabilidadRepoPath = path.resolve(
     projectRoot,
