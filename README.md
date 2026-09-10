@@ -109,6 +109,7 @@ inventory-management-system/
 ├── Backend/                # Backend Express
 |    │
 |    ├── services/               # Logica de negocio
+|    ├── repositories/           # Capa de acceso a Firestore
 |    ├── routes/                 # Rutas de la API
 |    ├── utils/                  # Utilidaddes compartidas
 |    ├── tests/                  # Tests automatizados
@@ -120,20 +121,28 @@ inventory-management-system/
 
 ---
 
-## Testing
+## Testing y CI
 
-El proyecto incluye testing automatizado para validar reglas de negocio críticas.
+El proyecto incluye una suite de testing automatizado para validar reglas de negocio críticas, ejecutada automáticamente en cada Pull Request mediante GitHub Actions.
 
-### Cobertura actual
+### Cómo ejecutar tests
 
-- Procesamiento contable
-- Validaciones de pedidos
-- Reglas de inventario
-- Casos límite operativos
+- `npm test` — ejecutar suite completa
+- `npm run test:ci` — ejecución para CI (sin watch)
 
-### Tecnología
+### Suite de testing
 
-- Vitest
+- Unit tests: utils, services, jobs, repositories
+- Integration tests: ventas, job contable
+- Flow test: flujo completo (pedido → contabilidad)
+- Helpers: mock de Firestore, utilidades de paths
+
+### CI/CD
+
+- GitHub Actions ejecuta tests en cada PR y push a main/develop
+- Workflow: `.github/workflows/ci.yml`
+- Node 22, `npm ci` + `npm run test:ci`
+- Gate: PRs no se mergean sin tests pasando
 
 ---
 

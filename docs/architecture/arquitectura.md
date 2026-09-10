@@ -33,6 +33,7 @@ Se encuentra organizado bajo una arquitectura basada en servicios:
 
 - routes → Definición de endpoints
 - services → Lógica de negocio
+- repositories → Acceso a Firestore
 - jobs → Procesos automáticos
 - lib → Conexiones y configuración
 
@@ -113,7 +114,6 @@ La arquitectura permite:
 - Migrar a microservicios si el negocio crece
 - Integrar dashboard analítico
 - Añadir sistema de reportes exportables
-- Implementar CI/CD
 
 La separación frontend/backend facilita futuras integraciones.
 

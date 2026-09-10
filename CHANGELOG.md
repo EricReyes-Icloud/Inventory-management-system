@@ -99,6 +99,25 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 
 ---
 
+### Capa Repository
+- Migración de acceso directo a Firestore hacia capa `repositories/`
+- Creación de módulos: admin, contabilidad, contable, productos, ventas (PRs #4–8)
+- Desacoplamiento de services del acceso a datos
+
+---
+
+### Suite de Testing
+- Suite completa de testing automatizado: ~16 archivos, unit/integration/flow
+- Cobertura de services, jobs, repositories, integración y flujo completo (PR #21)
+
+---
+
+### CI/CD
+- Pipeline de integración continua con GitHub Actions (PR #22)
+- Ejecución automática de tests en PR y push a main/develop
+
+---
+
 ### Testing
 - Configuración inicial de Vitest.
 - Inicio de testing automatizado para reglas de negocio.
@@ -130,7 +149,6 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 ---
 
 ### Firestore
-- Mejora progresiva del desacoplamiento de acceso a Firestore.
 - Optimización inicial de estructura documental.
 - Reorganización de históricos mensuales.
 
@@ -157,16 +175,6 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 ---
 
 ## En Progreso
-
-### Testing
-Actualmente se trabaja en:
-
-- Testing de reglas críticas
-- Protección contra regresiones
-- Validaciones automatizadas
-- Pruebas de integridad operacional
-
----
 
 ### Refactorización
 Actualmente se trabaja en mejoras relacionadas con:
@@ -217,10 +225,6 @@ Mejoras futuras:
 ### Infraestructura
 Planeado implementar:
 
-- CI/CD
-- GitHub Actions
-- Validaciones automáticas
-- Pipelines de integración
 - Despliegue automatizado
 
 ---
@@ -264,10 +268,11 @@ El proyecto se desarrolla bajo principios de:
 
 ```text
 Backend Core:               En desarrollo
-Testing Automatizado:       En progreso
+Testing Automatizado:       Completado
 Refactorización:            En progreso
+Capa Repository:            Completado
+CI/CD:                      Completado
 Frontend React:             Planeado
-CI/CD:                      Planeado
 Escalabilidad avanzada:     Planeado
 Producción estable:         Objetivo futuro
 ```
