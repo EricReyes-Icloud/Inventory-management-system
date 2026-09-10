@@ -99,6 +99,25 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 
 ---
 
+### Capa Repository
+- Migración de acceso directo a Firestore hacia capa `repositories/`
+- Creación de módulos: admin, contabilidad, contable, productos, ventas (PRs #4–8)
+- Desacoplamiento de services del acceso a datos
+
+---
+
+### Suite de Testing
+- Suite completa de testing automatizado: ~16 archivos, unit/integration/flow
+- Cobertura de services, jobs, repositories, integración y flujo completo (PR #21)
+
+---
+
+### CI/CD
+- Pipeline de integración continua con GitHub Actions (PR #22)
+- Ejecución automática de tests en PR y push a main/develop
+
+---
+
 ### Testing
 - Configuración inicial de Vitest.
 - Inicio de testing automatizado para reglas de negocio.
@@ -217,10 +236,6 @@ Mejoras futuras:
 ### Infraestructura
 Planeado implementar:
 
-- CI/CD
-- GitHub Actions
-- Validaciones automáticas
-- Pipelines de integración
 - Despliegue automatizado
 
 ---

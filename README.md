@@ -109,6 +109,7 @@ inventory-management-system/
 ├── Backend/                # Backend Express
 |    │
 |    ├── services/               # Logica de negocio
+|    ├── repositories/           # Capa de acceso a Firestore
 |    ├── routes/                 # Rutas de la API
 |    ├── utils/                  # Utilidaddes compartidas
 |    ├── tests/                  # Tests automatizados

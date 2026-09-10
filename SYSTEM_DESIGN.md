@@ -35,6 +35,7 @@ backend/
 │   ├── brain/          # Interpretación inteligente de pedidos en lenguaje natural
 │   ├── jobs/           # Procesos automáticos y tareas programadas
 │   ├── lib/            # Configuración y acceso a Firestore
+│   ├── repositories/   # Capa de acceso a Firestore
 │   ├── routes/         # Endpoints de la API
 │   ├── secrets/        # Configuración sensible
 │   ├── services/       # Lógica de negocio
@@ -85,9 +86,25 @@ Centralizar la lógica reutilizable y evitar duplicación de código.
 
 ---
 
-### 3. Capa de infraestructura (`lib/`)
+### 3. Capa de repositorios (`repositories/`)
 
-Abstracción del acceso a Firebase Firestore.
+Acceso a datos en Firebase Firestore.
+
+Responsable de:
+
+- Operaciones CRUD sobre Firestore
+- Desacoplamiento del acceso a datos de la lógica de negocio
+- Capa reutilizable para todos los módulos
+
+### Objetivo
+
+Separar el acceso a datos de la lógica de negocio y permitir testing más sencillo.
+
+---
+
+### 4. Capa de infraestructura (`lib/`)
+
+Configuración y conexión base de Firebase Firestore.
 
 Responsable de:
 
@@ -96,11 +113,11 @@ Responsable de:
 
 ### Objetivo
 
-Desacoplar el acceso a base de datos de la lógica de negocio.
+Mantener la configuración de infraestructura separada del acceso a datos.
 
 ---
 
-### 4. Capa de automatización (`jobs/`)
+### 5. Capa de automatización (`jobs/`)
 
 Procesos automáticos y tareas asincrónicas.
 
@@ -116,7 +133,7 @@ Tener un sistema asincrónico, mas un mecanismo de control manual por administra
 
 ---
 
-### 5. Capa de Integración (`whatsapp/`)
+### 6. Capa de Integración (`whatsapp/`)
 
 Módulo destinado a integraciones externas.
 
@@ -131,7 +148,7 @@ Mayor felxibilidad en el flujo normal del negocio.
 
 ---
 
-### 6. Capa de utilidades (`utils/`)
+### 7. Capa de utilidades (`utils/`)
 
 Funciones reutilizables compartidas entre módulos.
 
@@ -141,7 +158,7 @@ Separación clara de responsabilidades con funciones reutilizables.
 
 ---
 
-### 7. Capa Brain (`brain/`)
+### 8. Capa Brain (`brain/`)
 
 Capa orientada a la interpretación inteligente de pedidos generados en lenguaje natural y futura integración con IA.
 
@@ -162,7 +179,7 @@ Routes
    ↓
 Services
    ↓
-Firestore Layer
+Repositories
    ↓
 Firebase Firestore
 ```
@@ -203,8 +220,11 @@ Persistencia en Firestore
 - Reglas de negocio
 - Procesamiento operativo
 
+### Repositories
+- Acceso a datos en Firestore
+- Desacoplamiento de lógica de negocio
+
 ### Lib
-- Acceso a Firestore
 - Configuración de infraestructura
 
 ### Jobs
@@ -249,11 +269,11 @@ Optimizar consultas y estructura documental en Firestore para mejorar:
 - Escalabilidad operativa
 
 ### Acceso a datos desacoplado
-Fortalecer la abstracción del acceso a Firestore para permitir:
+La capa `repositories/` permite:
 
 - Mejor mantenibilidad
 - Testing más simple
-- Posibilidad futura de migrar infraestructura a traves de una capa `repository`
+- Desacoplamiento del acceso a Firestore de la lógica de negocio
 
 ### Procesamiento basado en Colas (Futuro)
 Evaluar procesamiento asíncrono mediante colas para tareas críticas y automatizaciones de alto volumen.
