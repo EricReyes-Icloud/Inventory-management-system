@@ -375,12 +375,25 @@ changes  X
 
 ## Pruebas de Testing previas a la fusión
 
-Antes de realizar merge se recomienda validar:
+Antes de realizar merge se debe ejecutar la suite de tests:
 
-- Funcionamiento general
-- Reglas críticas de negocio
-- Procesamiento contable
-- Validaciones operativas
+```bash
+# Ejecutar tests localmente
+npm test
+
+# Ejecutar en modo CI (como GitHub Actions)
+npm run test:ci
+```
+
+### Gate de CI
+
+Los Pull Requests no se pueden mergear si los tests no pasan. GitHub Actions ejecuta la suite automáticamente en cada PR.
+
+### Qué validar
+
+- Todos los tests pasan sin errores
+- No hay regresiones en reglas de negocio críticas
+- La suite completa se ejecuta correctamente
 
 ---
 
@@ -410,9 +423,7 @@ Sin embargo:
 
 El flujo de contribución está diseñado para evolucionar hacia:
 
-- Integración continua completa
-- Pipelines automatizados
-- Validaciones automáticas
-- Testing obligatorio
-- Despliegues controlados
+- Despliegues automatizados
+- Linting y formateo automático
+- Coverage mínimo de tests
 - Arquitectura más robusta
