@@ -149,7 +149,6 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 ---
 
 ### Firestore
-- Mejora progresiva del desacoplamiento de acceso a Firestore.
 - Optimización inicial de estructura documental.
 - Reorganización de históricos mensuales.
 
@@ -176,16 +175,6 @@ El proyecto sigue una evolución progresiva basada en arquitectura modular, auto
 ---
 
 ## En Progreso
-
-### Testing
-Actualmente se trabaja en:
-
-- Testing de reglas críticas
-- Protección contra regresiones
-- Validaciones automatizadas
-- Pruebas de integridad operacional
-
----
 
 ### Refactorización
 Actualmente se trabaja en mejoras relacionadas con:
@@ -279,10 +268,11 @@ El proyecto se desarrolla bajo principios de:
 
 ```text
 Backend Core:               En desarrollo
-Testing Automatizado:       En progreso
+Testing Automatizado:       Completado
 Refactorización:            En progreso
+Capa Repository:            Completado
+CI/CD:                      Completado
 Frontend React:             Planeado
-CI/CD:                      Planeado
 Escalabilidad avanzada:     Planeado
 Producción estable:         Objetivo futuro
 ```

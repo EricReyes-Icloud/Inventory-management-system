@@ -261,4 +261,4 @@ La IA se utiliza como herramienta de soporte:
 - Detectar escenarios no cubiertos
 - Revisar lógica antes de merge
 
-Las decisiones de testing siempre son supervisadas humanamente.
+Las decisiones de testing siempre son supervisadas.
