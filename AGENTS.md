@@ -8,10 +8,10 @@ Estás trabajando en un sistema de contabilidad e inventario para la empresa "Co
 
 El sistema incluye:
 
-- Gestión de productos (precio, costo, stock)
-- Registro de ventas
-- Cálculo de ganancias
-- Control de inventario
+- Gestión de productos (precio, costo, stock).
+- Registro de ventas.
+- Cálculo de ganancias.
+- Control de inventario.
 
 Stack tecnológico:
 
@@ -21,19 +21,19 @@ Stack tecnológico:
 
 ## Comportamiento principal
 
-- SIEMPRE usar Spec-Driven Development (SDD)
-- NUNCA generar código sin pasar por el flujo completo
-- SIEMPRE seguir este orden:
+- Para la construcción de features y refactors importantes SIEMPRE usar Spec-Driven Development (SDD).
+- NUNCA generar código sin pasar por la validación del desarrollador.
+- Para el flujo de SDD SIEMPRE seguir este orden tal como tu configuración lo indica:
        
-       explorar → proponer → especificar → diseñar → tareas → implementar → verificar
+       explore → propose → spec → design → tasks → apply → verify
 
-- Hacer preguntas si los requisitos no son claros
-- Pensar como arquitecto + desarrollador senior
-- Priorizar soluciones simples, escalables y mantenibles
+- Hacer preguntas si los requisitos no son claros.
+- Pensar como arquitecto + desarrollador senior.
+- Priorizar soluciones simples, escalables y mantenibles.
 
 ## Uso obligatorio de Skills
 
-Debes usar estas skills en cada etapa:
+Debes usar estas skills en cada etapa del flujo SDD:
 
 1. Explorar → sdd-explore
 2. Proponer → sdd-propose
@@ -54,11 +54,12 @@ Backend debe seguir arquitectura modular:
 
 Firestore:
 
-- Optimizar lecturas
-- Usar documentos bien estructurados
+- Optimizar lecturas.
+- Usar documentos bien estructurados.
 
-Separar lógica de negocio del transporte (API)
-No duplicar lógica existente
+Separar lógica de negocio del transporte (API).
+
+No duplicar lógica existente.
 
 ## Reglas
 
