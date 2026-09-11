@@ -175,6 +175,25 @@ Las nuevas implementaciones deben prepararse para solucionar estas limitaciones.
 
 ---
 
+## Comportamiento Actual
+
+### CI/CD
+
+El sistema cuenta con un pipeline de integración continua:
+
+- GitHub Actions ejecuta tests en cada PR y push a main/develop
+- Workflow: `.github/workflows/ci.yml`
+- Validación automática antes de merge
+
+### Capa Repository
+
+El acceso a datos está desacoplado mediante la capa `repositories/`:
+
+- Operaciones CRUD encapsuladas por módulo
+- Desacoplamiento del acceso a Firestore de la lógica de negocio
+
+---
+
 ## Comportamiento Futuro Esperado
 
 El sistema evolucionará hacia:
@@ -183,7 +202,6 @@ El sistema evolucionará hacia:
 - Jobs distribuidos
 - Transacciones Firestore
 - Autenticación robusta
-- CI/CD automatizado
 - Frontend React completo
 - Dashboard administrativo
 - Integración IA avanzada

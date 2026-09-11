@@ -1,0 +1,5 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Documentation: always LF in the repository
+*.md text eol=lf

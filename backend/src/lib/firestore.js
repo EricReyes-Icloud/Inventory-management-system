@@ -1,13 +1,27 @@
 // src/lib/firestore.js
 const admin = require("firebase-admin");
-const serviceAccount = require("../secrets/serviceAccountKey.json");
+
+let serviceAccount;
+try {
+  serviceAccount = require("../secrets/serviceAccountKey.json");
+} catch {
+  // CI / fresh-clone fallback: use env-var credentials
+  serviceAccount = null;
+}
 
 // Evita inicializar Firebase más de una vez
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: serviceAccount.project_id,
-  });
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: serviceAccount.project_id,
+    });
+  } else {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      projectId: process.env.FIREBASE_PROJECT_ID || "test-project",
+    });
+  }
 }
 
 // Instancia de Firestore

@@ -2,223 +2,263 @@
 
 ## Objetivo
 
-Garantizar la calidad, consistencia y confiabilidad del sistema contable mediante pruebas automatizadas que cubran:
-
-- Normalización de texto
-- Clasificación de productos
-- Procesamiento contable
-- Flujo completo desde pedido → contabilidad
+Este documento explica la estrategia de testing automatizado del proyecto. Está pensado como guía educativa para que entiendas qué cubre cada tipo de test y por qué es importante para la integridad del sistema.
 
 ---
 
-# Qué ya está testeado
+## Cómo ejecutar los tests
 
-## 1. Unit Tests — Utils
+```bash
+# Ejecutar toda la suite
+npm test
 
-### 🔹 normalizarTexto
-Archivo: `tests/unit/utils/normalizarTexto.test.ts`
+# Ejecutar en modo CI (sin watch)
+npm run test:ci
 
-✔ Cobertura:
-- Minúsculas y eliminación de tildes
-- Eliminación de caracteres especiales
+# Ejecutar un archivo específico
+npx vitest run tests/unit/utils/normalizarTexto.test.ts
+```
+
+---
+
+## Estructura de la suite
+
+```text
+backend/tests/
+├── unit/                  # Tests unitarios aislados
+│   ├── utils/             # Utilidades compartidas
+│   ├── services/          # Lógica de negocio
+│   ├── job/               # Reglas del job contable
+│   └── repositories/      # Capa de acceso a datos
+├── integration/           # Tests de integración con mocks
+├── flow/                  # Tests de flujo completo
+└── helpers/               # Infraestructura compartida de testing
+```
+
+Cada categoría tiene un propósito específico y valida un nivel diferente del sistema.
+
+---
+
+## Unit Tests — Utils
+
+Vas a encontrar dos archivos de test en esta categoría:
+
+### `normalizarTexto.test.ts`
+
+Este test valida la función `normalizarTexto`, que es la base del sistema de interpretación de pedidos. Lo que cubre:
+
+- Conversión a minúsculas y eliminación de tildes
+- Limpieza de caracteres especiales
 - Conversión de plurales a singular
-- Transformación de `"de"` → `"*"`
-- Limpieza de espacios
-- Manejo de inputs inválidos
+- Transformación de `"de"` → `"*"` (para matching posterior)
+- Manejo de inputs inválidos (strings vacíos, null, undefined)
 
-Resultado:
-Función validada como base del sistema de interpretación
+**Por qué importa**: Si `normalizarTexto` falla, todo el pipeline de interpretación NLP se rompe. Este test protege la entrada más crítica del sistema.
 
----
+### `obtenerCategoria.test.ts`
 
-### 🔹 obtenerCategoria
-Archivo: `tests/unit/utils/obtenerCategoria.test.ts`
+Valida la función `obtenerCategoria`, encargada de clasificar productos en categorías. Cubre:
 
-✔ Cobertura:
-- Identificación de categorías correctas
+- Identificación correcta de categorías
 - Insensibilidad a mayúsculas y tildes
 - Diferenciación entre categorías similares (ej: `Canela` vs `Canela_molida`)
 - Casos reales del negocio (pedidos tipo WhatsApp)
 - Manejo de productos desconocidos
 - Edge cases (strings vacíos, inválidos)
 
-  Mejoras implementadas:
-- Reemplazo de `startsWith` → `includes`
-- Ordenamiento por longitud (prioridad a categorías más específicas)
-- Normalización de `_` → espacio para compatibilidad semántica
-
-Resultado:
-Clasificación robusta de productos basada en lenguaje natural
+**Por qué importa**: La clasificación incorrecta de productos afecta directamente los cálculos contables y el inventario.
 
 ---
 
-# Decisiones clave de arquitectura
+## Unit Tests — Services
 
-## 1. Single Source of Truth
+Los services contienen la lógica de negocio crítica. Los tests de esta categoría validan cálculos financieros y operaciones contables.
 
-- `normalizarTexto` centralizada en: `/utils`
-- Eliminación de funciones duplicadas en services
+### `contabilidad.service.test.ts`
+
+Valida el servicio de contabilidad:
+
+- Procesamiento de totales y cartones
+- Suma correcta de subtotales
+- Incremento correcto de cartones
+- Agrupación por categoría y SKU
+- Validación de inputs inválidos
+
+**Por qué importa**: Un error en contabilidad afecta directamente los reportes financieros del negocio.
+
+### `ganancias.service.test.ts`
+
+Valida el cálculo de ganancias:
+
+- Cálculo correcto de ganancias por producto
+- Manejo de precios y costos
+- Validación de datos incompletos
+
+**Por qué importa**: Las ganancias son el indicador más importante para el negocio. Un error aquí tiene impacto directo en la toma de decisiones.
+
+### `monthlyClosing.service.test.ts`
+
+Valida el proceso de cierre mensual:
+
+- Consolidación de datos del mes
+- Actualización de históricos
+- Validación de estados previos al cierre
+
+**Por qué importa**: El cierre mensual es irreversible en el contexto del negocio. Debe ejecutarse correctamente la primera vez.
 
 ---
 
-## 2. Separación de responsabilidades
+## Unit Tests — Jobs
 
-Funciones separadas según contexto:
+### `jobContable.rules.test.ts`
 
-- `normalizarTexto` → productos (NLP ligero)
-- `normalizarCliente` → clientes (búsqueda exacta)
-
-No mezclar ambas
-
----
-
-## 3. Clasificación flexible (NLP básico)
-
-- Matching por contenido (`includes`)
-- No dependiente del orden del texto
-- Soporte para lenguaje natural real
-
----
-
-## 4. Testing basado en negocio
-
-Los tests no validan solo código, validan:
-
-- comportamiento real del usuario
-- flujo de datos
-- impacto en contabilidad
-
----
-
-# Qué falta testear
-
-## PRIORIDAD 1 — Reglas del Job Contable
-
-Archivo objetivo: `tests/unit/job/jobContable.rules.test.ts`
-
-### Tests a crear:
+Valida las reglas del job contable:
 
 - No procesar pedidos no pagados
 - No procesar pedidos ya contabilizados
 - Procesar solo pedidos con `estadoContable = pendiente`
 - Validar estructura de `detalle`
 - Validar `fechaPedido`
-- Cambiar estado correctamente:
-  - `pendiente` → `procesado`
-  - `contabilidadAplicada = true`
+- Cambiar estado correctamente: `pendiente` → `procesado`
 
-Objetivo:
-Proteger la lógica crítica de negocio
+**Por qué importa**: El job contable es un proceso automático que ejecuta operaciones críticas. Si sus reglas fallan, se procesan pedidos que no deberían o se saltan pedidos que sí deberían procesarse.
 
 ---
 
-## PRIORIDAD 2 — Services (contabilidad)
+## Unit Tests — Repositories
 
-Archivo: `tests/unit/services/contabilidad.test.ts`
+Vas a encontrar 5 archivos de test para la capa de repositories:
 
-### Tests:
+### `admin.repository.test.ts`
 
-- `procesarTotalesYCartones`
-  - Suma correcta de subtotales
-  - Incremento correcto de cartones
-  - Agrupación por categoría y SKU
-- Validación de inputs inválidos
+Valida operaciones de administración sobre Firestore.
 
-Objetivo:
-Garantizar integridad financiera
+### `contabilidad.repository.test.ts`
+
+Valida operaciones contables: obtener datos, ejecutar batch, limpiar categorías.
+
+### `contable.repository.test.ts`
+
+Valida las operaciones del repository contable: build de operaciones, ejecución de batch.
+
+### `productos.repository.test.ts`
+
+Valida el acceso a datos de productos.
+
+### `ventas.repository.test.ts`
+
+Valida el acceso a datos de ventas.
+
+**Por qué importa**: Los repositories desacoplan la lógica de negocio del acceso a Firestore. Testearlos asegura que las operaciones CRUD funcionan correctamente de forma aislada.
 
 ---
 
-## PRIORIDAD 3 — Integration Tests
+## Integration Tests
 
-Archivos: `tests/integration/ventas.test.ts`
+Los tests de integración validan endpoints completos con Firestore mockeado.
 
-### Tests:
+### `ventas.test.ts`
 
-- POST `/pedido-libre`
-  - Cliente válido / inválido
-  - Mensaje válido / inválido
-  - Flujo completo de creación de pedido
+Valida el endpoint `POST /pedido-libre`:
+
+- Cliente válido / inválido
+- Mensaje válido / inválido
+- Flujo completo de creación de pedido
 - Validación de respuestas HTTP
 
-Objetivo:
-Validar endpoints reales
+**Por qué importa**: Este es el endpoint principal del sistema. Si falla, los pedidos no se registran.
 
----
+### `jobContable.test.ts`
 
-Archivos: `tests/integration/jobContable.test.ts`
-
-### Tests:
+Valida la ejecución del job contable sobre datos simulados:
 
 - Procesa pedidos pendientes correctamente
 - No procesa pedidos no pagados
 - No reprocesa pedidos ya contabilizados
-- Actualiza estado:
-  - `estadoContable = procesado`
-  - `contabilidadAplicada = true`
+- Actualiza estado a `procesado` con `contabilidadAplicada = true`
 - Llama correctamente a `procesarTotalesYCartones`
 
-Objetivo:
-Validar la ejecución real del job sobre datos (simulación de Firestore)
+**Por qué importa**: El job contable se ejecuta de forma automática. Un error aquí afecta todo el procesamiento contable del sistema.
 
+---
 
-## PRIORIDAD 4 — Flow Tests (End-to-End lógico)
+## Flow Tests
 
-Archivos: `tests/flow/flujoCompleto.test.ts`
+### `flujoCompleto.test.ts`
 
-Flujo completo:
+Simula el flujo completo del sistema:
 
-       mensaje → inturis → ventas → Firestore → jobContable → contabilidad
+```text
+mensaje → inturis → ventas → Firestore → jobContable → contabilidad
+```
 
-
-### Validar:
+Valida:
 
 - Pedido se crea correctamente
 - Pedido pasa a estado "pendiente"
 - Job lo procesa correctamente
 - Totales se reflejan en Firestore
 
-Objetivo:
-Simular comportamiento real del sistema
+**Por qué importa**: Este test valida que todas las piezas del sistema trabajan juntas correctamente. Es el nivel más alto de confianza antes de producción.
 
 ---
 
-# Qué NO testear (para no perder tiempo)
+## Helpers
 
-- Firestore SDK interno
-- Express internals
+### `firestoreMock.ts`
+
+Mock compartido de Firestore. Permite simular operaciones de base de datos sin conectar a un servicio real.
+
+### `paths.ts`
+
+Utilidades de paths para tests. Centraliza rutas de archivos de test y configuración.
+
+**Por qué importa**: La infraestructura compartida mantiene los tests consistentes y evita duplicación de configuración.
+
+---
+
+## CI/CD
+
+El proyecto utiliza GitHub Actions para integración continua.
+
+### Workflow
+
+- Archivo: `.github/workflows/ci.yml`
+- Ejecución: en cada Pull Request y push a `main` / `develop`
+- Entorno: Node.js 22
+- Comandos: `npm ci` + `npm run test:ci`
+
+### Qué valida
+
+- Todos los tests pasan correctamente
+- No hay errores de compilación
+- La suite completa se ejecuta sin timeouts
+
+### Gate de PR
+
+Los Pull Requests no se pueden mergear si los tests no pasan. Esto garantiza que cada cambio llega a `main` con validación automática.
+
+---
+
+## Qué NO testear
+
+Algunas áreas no requieren testing de nuestra parte:
+
+- Firestore SDK interno (dependencia externa)
+- Express internals (dependencia externa)
 - Console logs
 - Librerías externas
 
-Solo testear nuestra lógica
+Solo testear nuestra lógica de negocio.
 
 ---
 
-# Uso de IA en testing
+## Uso de IA en testing
 
-Se utilizará IA para:
+La IA se utiliza como herramienta de soporte:
 
 - Generar casos edge automáticamente
 - Detectar escenarios no cubiertos
-- Revisar lógica antes de merge (GitHub + Copilot)
+- Revisar lógica antes de merge
 
----
-
-# CI/CD (futuro cercano)
-
-Se integrará:
-
-- GitHub Actions
-- Ejecución automática de tests en cada push
-- Validación antes de merge a `main`
-
----
-
-# Estado actual
-
-```diff
-+ Unit Tests (utils) → COMPLETADO
-- Job Contable → PENDIENTE
-- Services → PENDIENTE
-- Integration → PENDIENTE
-- Flow → PENDIENTE
+Las decisiones de testing siempre son supervisadas.

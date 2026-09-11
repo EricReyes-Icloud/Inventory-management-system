@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizarTexto } from "../../../src/utils/normalizarTexto"; // ajusta ruta
+const { normalizarTexto } = require("../../../src/utils/normalizarTexto"); // ajusta ruta
 
 describe("normalizarTexto", () => {
  

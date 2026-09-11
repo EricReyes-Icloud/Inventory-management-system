@@ -1,167 +1,38 @@
 // services/contabilidad.service.js
-const db = require("../lib/firestore"); // Solo la usamos en el Historico Mensual
-const { diccionarioCategorias } = require("../utils/diccionario.js");
-const { obtenerMesAnio } = require("../utils/fechas.js");
-const { FieldValue } = require("firebase-admin/firestore");
-const { normalizarTexto } = require("../utils/normalizarTexto.js");
+// Orquesta la lógica de negocio contable usando el repositorio.
+// Toda la interacción con Firestore está delegada a contabilidad.repository.js
 
-
-
-  const categoriasOrdenadas = Object.keys(diccionarioCategorias)
-    .sort((a, b) => {
-      const aNorm = normalizarTexto(a.replace(/_/g, " "));
-      const bNorm = normalizarTexto(b.replace(/_/g, " "));
-      return bNorm.length - aNorm.length;
-    });
-
-  for (const categoria of categoriasOrdenadas) {
-    const categoriaNormalizada = normalizarTexto(
-      categoria.replace(/_/g, " ")
-    );
-
-    if (skuNormalizado.includes(categoriaNormalizada)) {
-      return categoria;
-    }
-  }
-
-  console.warn(`⚠️ SKU sin categoría definida: ${nombre}`);
-  return null; // Si no la encuentra, lanzamos un warning y devolvemos null
-}
-
-
-/* ================= CONTABILIDAD MENSUAL ================= */
-
-function calcularOperacionesTotalesYCartones(items, fechaPedido) {
-  if (!Array.isArray(items) || items.length === 0) { // Evitamos items invalidos
-    throw new Error("Items inválidos para contabilidad");
-  }
-
-  if (!(fechaPedido instanceof Date)) { // Evitamos errores silenciosos
-    throw new Error("fechaPedido inválida"); 
-  }
-
-  const operaciones = []; // Vamos acumulando todo
-  const mesAnio = obtenerMesAnio(fechaPedido); // Agrupamos por mes y año
-
-  const totalMesPath = `Total Productos/${mesAnio}`; // Almacenamos en Paths para desacoplamiento
-  const cartonesMesPath = `Cartones_vendidos/${mesAnio}`;
-
-  /* ==============================
-     1️⃣ ASEGURAR DOCUMENTO PRINCIPAL
-  =============================== */
-
-  // Esto no ejecuta nada, solo describe
-
-  operaciones.push({ // Hacemos un set en el documento
-    ref: totalMesPath,
-    data: {
-      mesAnio,
-      totalGeneral: FieldValue.increment(0), // Inicializamos sin modificar
-      estado: "abierto",
-      creadoEn: FieldValue.serverTimestamp(),
-      actualizadoEn: FieldValue.serverTimestamp(),
-    },
-    options: { merge: true }, // No sobreescribimos, mezclamos
-  });
-
-  operaciones.push({
-    ref: cartonesMesPath,
-    data: {
-      mesAnio,
-      totalGeneral: FieldValue.increment(0),
-      estado: "abierto",
-      creadoEn: FieldValue.serverTimestamp(),
-      actualizadoEn: FieldValue.serverTimestamp(),
-    },
-    options: { merge: true },
-  });
-
-  /* ==============================
-     2️⃣ PROCESAR ITEMS
-  =============================== */
-
-  for (const it of items) { // Iteramos cada item
-    const categoria = obtenerCategoria(it.nombre);
-    if (!categoria) continue; // Si no hay categoria ignoramos
-
-    const sku = it.nombre.toString().trim(); // Nombre del producto
-    const subtotal = Number(it.subtotal || 0); // Proteccion contra datos malos
-    const cantidad = Number(it.cantidad || 0);
-
-    // Creamos los Paths
-    const productoTotalPath = `${totalMesPath}/productos/${categoria}`;
-    const skuTotalPath = `${productoTotalPath}/skus/${sku}`;
-
-    const productoCartonPath = `${cartonesMesPath}/productos/${categoria}`;
-    const skuCartonPath = `${productoCartonPath}/skus/${sku}`;
-
-    /* ===== 💰 DINERO ===== */
-
-    operaciones.push({
-      ref: productoTotalPath,
-      data: { total: FieldValue.increment(subtotal) }, // Sumamos dinero por categoria
-      options: { merge: true },
-    });
-
-    operaciones.push({
-      ref: skuTotalPath,
-      data: { total: FieldValue.increment(subtotal) }, // Sumamos por Sku
-      options: { merge: true },
-    });
-
-    operaciones.push({
-      ref: totalMesPath,
-      data: {
-        totalGeneral: FieldValue.increment(subtotal), // Generamos el total global
-        actualizadoEn: FieldValue.serverTimestamp(),
-      },
-      options: { merge: true },
-    });
-
-    /* ===== 📦 CANTIDAD ===== */
-
-    operaciones.push({
-      ref: productoCartonPath,
-      data: { total: FieldValue.increment(cantidad) },
-      options: { merge: true },
-    });
-
-    operaciones.push({
-      ref: skuCartonPath,
-      data: { total: FieldValue.increment(cantidad) },
-      options: { merge: true },
-    });
-
-    operaciones.push({
-      ref: cartonesMesPath,
-      data: {
-        totalGeneral: FieldValue.increment(cantidad),
-        actualizadoEn: FieldValue.serverTimestamp(),
-      },
-      options: { merge: true },
-    });
-  }
-
-  return operaciones;
-}
+const contabilidadRepo = require("../repositories/contabilidad.repository");
 
 /* ================= HISTÓRICO MENSUAL ================= */
 
-async function generarHistoricoMensual(mesAnio) {
+/**
+ * Generates a monthly historical snapshot from Total Productos and Cartones_vendidos.
+ * Idempotent: overwrites on re-run (no existence guard).
+ *
+ * @param {string} mesAnio — e.g. "Enero 2026"
+ * @param {object} admin — { uid, nombre } of the admin who triggered the close
+ * @returns {Promise<object>} — the generated snapshot
+ */
+async function generarHistoricoMensual(mesAnio, admin) {
+  // ── Validation guards ──────────────────────────────────────────
+  if (!admin || !admin.uid) {
+    throw new Error("admin.uid es obligatorio");
+  }
+  if (!admin || !admin.nombre) {
+    throw new Error("admin.nombre es obligatorio");
+  }
 
-  const totalMesRef = db.collection("Total Productos").doc(mesAnio);
-  const cartonesMesRef = db.collection("Cartones_vendidos").doc(mesAnio);
-  const historicoRef = db.collection("Historico_Mensual").doc(mesAnio);
-
-  const historicoSnap = await historicoRef.get();
-  if (historicoSnap.exists) {
-    throw new Error(`El histórico de ${mesAnio} ya fue generado`);
+  const existente = await contabilidadRepo.getHistoricoMensual(mesAnio);
+  if (existente) {
+    throw new Error(`El histórico para ${mesAnio} ya fue generado`);
   }
 
   const totalProductos = {};
   const cartonesVendidos = {};
 
-  const productosSnap = await totalMesRef.collection("productos").get();
+  // Leer categorías y SKUs de Total Productos
+  const productosSnap = await contabilidadRepo.getCategoriasTotalProductos(mesAnio);
 
   for (const productoDoc of productosSnap.docs) {
     const categoria = productoDoc.id;
@@ -171,7 +42,7 @@ async function generarHistoricoMensual(mesAnio) {
       skus: {}
     };
 
-    const skusSnap = await productoDoc.ref.collection("skus").get();
+    const skusSnap = await contabilidadRepo.getSkusTotalProductos(mesAnio, categoria);
 
     for (const skuDoc of skusSnap.docs) {
       totalProductos[categoria].skus[skuDoc.id] =
@@ -179,8 +50,9 @@ async function generarHistoricoMensual(mesAnio) {
     }
   }
 
+  // Leer categorías y SKUs de Cartones Vendidos
   const productosCartonesSnap =
-    await cartonesMesRef.collection("productos").get();
+    await contabilidadRepo.getCategoriasCartonesVendidos(mesAnio);
 
   for (const productoDoc of productosCartonesSnap.docs) {
     const categoria = productoDoc.id;
@@ -190,7 +62,7 @@ async function generarHistoricoMensual(mesAnio) {
       skus: {}
     };
 
-    const skusSnap = await productoDoc.ref.collection("skus").get();
+    const skusSnap = await contabilidadRepo.getSkusCartonesVendidos(mesAnio, categoria);
 
     for (const skuDoc of skusSnap.docs) {
       cartonesVendidos[categoria].skus[skuDoc.id] =
@@ -198,19 +70,23 @@ async function generarHistoricoMensual(mesAnio) {
     }
   }
 
-  await historicoRef.set({
-    mesAnio,
+  // Guardar snapshot histórico with metadata
+  await contabilidadRepo.setHistoricoMensual(mesAnio, {
     totalProductos,
     cartonesVendidos,
-    generadoEn: new Date(),
     estado: "cerrado",
+    generadoEn: new Date(),
+    generadoPor: admin.uid,
+    usuario: admin.nombre,
   });
+
+  return { totalProductos, cartonesVendidos };
 }
 
 /* ================= EXPORTS ================= */
 
 module.exports = {
-  calcularOperacionesTotalesYCartones,
   generarHistoricoMensual,
-  obtenerCategoria
+  obtenerCategoria: contabilidadRepo.obtenerCategoria,
+  buildOperacionesContables: contabilidadRepo.buildOperacionesContables,
 };

@@ -50,12 +50,21 @@ Contienen:
 
 ---
 
+## `repositories/`
+
+Responsable únicamente de:
+
+- Acceso a Firestore
+- Operaciones CRUD sobre datos
+
+---
+
 ## `lib/`
 
 Responsable únicamente de:
 
-- Conexión Firestore
-- Configuración infraestructura
+- Configuración de infraestructura
+- Inicialización de Firebase
 
 ---
 
@@ -221,5 +230,4 @@ El código debe prepararse para futura implementación de:
 - Idempotencia
 - Colas
 - Concurrencia segura
-- CI/CD
 - Autenticación robusta

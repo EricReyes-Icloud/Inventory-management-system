@@ -18,10 +18,10 @@ Inventory Management System es una aplicación web diseñada para digitalizar y 
 
 El proyecto nace a partir de una necesidad real de la empresa, la cual realizaba sus procesos manualmente, generando:
 
-- Pérdida de tiempo.
-- Errores de inventario.
-- Dificultad para calcular ganancias.
-- Baja trazabilidad de ventas.
+- Pérdida de tiempo
+- Errores de inventario
+- Dificultad para calcular ganancias
+- Baja trazabilidad de ventas
 
 El sistema busca resolver estos problemas mediante automatización, centralización de datos y procesamiento inteligente de operaciones.
 
@@ -31,17 +31,17 @@ El sistema busca resolver estos problemas mediante automatización, centralizaci
 
 La empresa aún maneja:
 
-- Inventarios manuales.
-- Registros físicos.
-- Control deficiente de productos y ventas.
+- Inventarios manuales
+- Registros físicos
+- Control deficiente de productos y ventas
 
 Esto genera:
 
-- Inconsistencias de stock.
-- Errores humanos.
-- Pérdida de información.
-- Poca escalabilidad.
-- Baja capacidad de análisis financiero.
+- Inconsistencias de stock
+- Errores humanos
+- Pérdida de información
+- Poca escalabilidad
+- Baja capacidad de análisis financiero
 
 Inventory Management System transforma estos procesos en un flujo digital centralizado y automatizado.
 
@@ -90,13 +90,13 @@ Firebase Firestore
 
 ### Principios utilizados
 
-- Modular Architecture.
-- Separation of Concerns.
-- Service Layer Pattern.
-- Scalable Folder Structure.
-- Reusable Business Logic.
-- Centralized Validation.
-- Automated Processing Flows.
+- Modular Architecture
+- Separation of Concerns
+- Service Layer Pattern
+- Scalable Folder Structure
+- Reusable Business Logic
+- Centralized Validation
+- Automated Processing Flows
 
 ---
 
@@ -109,8 +109,9 @@ inventory-management-system/
 ├── Backend/                # Backend Express
 |    │
 |    ├── services/               # Logica de negocio
+|    ├── repositories/           # Capa de acceso a Firestore
 |    ├── routes/                 # Rutas de la API
-|    ├── utils/                  # Utilidades compartidas
+|    ├── utils/                  # Utilidaddes compartidas
 |    ├── tests/                  # Tests automatizados
 |
 ├── docs/                   # Documentación tecnica
@@ -120,24 +121,29 @@ inventory-management-system/
 
 ---
 
-## Testing
+## Testing y CI
 
-El proyecto incluye testing automatizado para validar reglas de negocio críticas.
+El proyecto incluye una suite de testing automatizado para validar reglas de negocio críticas, ejecutada automáticamente en cada Pull Request mediante GitHub Actions.
 
-### Cobertura actual
+### Cómo ejecutar tests
 
-- Procesamiento contable.
-- Validaciones de pedidos.
-- Reglas de inventario.
-- Casos límite operativos.
+- `npm test` — ejecutar suite completa
+- `npm run test:ci` — ejecución para CI (sin watch)
 
-### Tecnología
+### Suite de testing
 
-- Vitest
+- Unit tests: utils, services, jobs, repositories
+- Integration tests: ventas, job contable
+- Flow test: flujo completo (pedido → contabilidad)
+- Helpers: mock de Firestore, utilidades de paths
 
-### Estado
+### CI/CD
 
-- En desarrollo activo, unit test e integration test cubren los casos principales del sistema, sin embargo, aún se encuentran en pruebas de validación con referencia a las reglas de negocio.
+- GitHub Actions ejecuta tests en cada PR y push a main/develop
+- Workflow: `.github/workflows/ci.yml`
+- Node 22, `npm ci` + `npm run test:ci`
+- Gate: PRs no se mergean sin tests pasando
+
 ---
 
 ## Deployment
@@ -146,36 +152,36 @@ El proyecto está diseñado para despliegue cloud-based.
 
 ### Posibles plataformas
 
-#### Frontend
+### Frontend
 - Vercel
 - Netlify
 
-#### Backend
+### Backend
 - Render
 - Railway
 
-#### Database
+### Database
 - Firebase Firestore
 
 ---
 
-## Desarrollo asistido por IA
+## Desarrollado asistido por IA
 
 Este proyecto incorpora integración estratégica de inteligencia artificial como parte del flujo de desarrollo.
 
 ### Uso de IA en el proyecto
 
-- Arquitectura asistida por IA.
-- Automatización e implementación de testing.
-- Generación de documentación técnica.
-- Soporte y configuración para agentes de IA mediante `AGENTS.md`.
-- Integración profesional con OpenCode.
+- Arquitectura asistida por IA
+- Automatización de testing
+- Generación de documentación técnica
+- Soporte para agentes IA mediante `agent.md`
+- Integración profesional con OpenCode
 
 ### Filosofía
 
 La IA es utilizada como herramienta de productividad y aceleración técnica, mientras que las decisiones arquitectónicas, validaciones y dirección del proyecto son realizadas manualmente.
 
-El objetivo es hacer uso de un enfoque moderno de desarrollo dirigido por especificaciones donde el desarrollador lidera y supervisa el uso de la IA dentro de un ecosistema profesional.
+El objetivo es hacer uso de un enfoque moderno de desarrollo dirigido por especificaciones donde el desarrollador lidera y supervisa el uso de IA dentro de un ecosistema profesional.
 
 ---
 
@@ -185,10 +191,11 @@ Este proyecto no busca únicamente "funcionar".
 
 Está diseñado para:
 
-- Aplicar buenas prácticas reales.
-- Construir arquitectura mantenible.
-- Implementar automatización inteligente.
-- Desarrollar habilidades de software profesional.
+- Aplicar buenas prácticas reales
+- Construir arquitectura mantenible
+- Implementar automatización inteligente
+- Desarrollar habilidades de ingeniería profesional
+- Demostrar capacidad de dirección técnica utilizando IA
 
 El enfoque principal es crear un sistema escalable, entendible y alineado con prácticas modernas de desarrollo de software.
 
@@ -196,18 +203,15 @@ El enfoque principal es crear un sistema escalable, entendible y alineado con pr
 
 ## Estado del proyecto
 
-En desarrollo activo.
+En desarrollo activo
 
 Actualmente el proyecto continúa evolucionando en:
 
-- Arquitectura.
-- Testing.
-- Automatización.
-- Flujo de datos consistente.
-- Base principal del sistema.
-- Integridad de los datos.
-- Aceleración del desarrollo con IA.
-
+- Arquitectura
+- Testing
+- Automatización
+- Integración IA
+- Experiencia de usuario
 
 ---
 

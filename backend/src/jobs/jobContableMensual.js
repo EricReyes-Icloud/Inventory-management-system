@@ -1,14 +1,22 @@
 const db = require("../lib/firestore");
-const { calcularOperacionesTotalesYCartones } = require("../services/contabilidad.service");
+const contabilidadRepo = require("../repositories/contabilidad.repository");
+const ventasRepo = require("../repositories/ventas.repository");
 
-async function jobContableMensual() {
+/**
+ * Processes all pending orders across clients and months.
+ * Idempotent: skips orders that are already processed (contabilidadAplicada === true)
+ * or not paid. Builds atomic batch operations via contabilidadRepo and commits them.
+ *
+ * @returns {Promise<{pedidosProcesados: number, pedidosFallidos: number}>}
+ */
+async function processPendingOrders() {
   console.log("🔄 Iniciando Job Contable");
 
-  const clientesSnap = await db.collection("Ventas").get();
+  const clientesSnap = await ventasRepo.getTodosClientesConVentas();
 
   if (clientesSnap.empty) {
     console.log("ℹ️ No hay clientes con ventas");
-    return;
+    return { pedidosProcesados: 0, pedidosFallidos: 0 };
   }
 
   let pedidosProcesados = 0;
@@ -19,12 +27,7 @@ async function jobContableMensual() {
 
     console.log(`👤 Cliente: ${clienteId}`);
 
-    const pedidosRootRef = db
-      .collection("Ventas")
-      .doc(clienteId)
-      .collection("Pedidos");
-
-    const mesesSnap = await pedidosRootRef.get();
+    const mesesSnap = await ventasRepo.getMesesPedidos(clienteId);
 
     console.log(
       `📂 Rutas encontradas para ${clienteId}:`,
@@ -41,13 +44,7 @@ async function jobContableMensual() {
 
       console.log(`📅 Mes: ${mesAnio}`);
 
-      const pedidosCollectionRef = pedidosRootRef
-        .doc(mesAnio)
-        .collection("pedidos");
-
-      const pedidosSnap = await pedidosCollectionRef
-        .where("estadoContable", "==", "pendiente")
-        .get();
+      const pedidosSnap = await ventasRepo.getPedidosPendientes(clienteId, mesAnio);
 
       console.log(
         `📦 ${clienteId} | ${mesAnio} → pedidos pendientes: ${pedidosSnap.size}`
@@ -65,20 +62,19 @@ async function jobContableMensual() {
           continue;
         }
 
-        // 🔐 Evita doble procesamiento
+        // 🔐 Evita doble procesamiento — idempotency guard
         if (pedido.contabilidadAplicada === true) {
           console.log(`⏭ Pedido ${pedidoDoc.id} ya contabilizado`);
           continue;
         }
 
-	// 🔎 Validar detalle
+        // 🔎 Validar detalle
         if (!Array.isArray(pedido.detalle) || pedido.detalle.length === 0) {
           console.warn(`⚠️ Pedido ${pedidoDoc.id} sin detalles`);
           continue;
         }
 
-	
-	// 📅 Validar fecha
+        // 📅 Validar fecha
         const fechaPedido =
           pedido.fechaPedido?.toDate?.() ?? pedido.fechaPedido;
 
@@ -92,16 +88,16 @@ async function jobContableMensual() {
         );
 
         try {
-          // 🧠 1. Calcular operaciones
-          const operaciones = calcularOperacionesTotalesYCartones(
+          // 🧠 1. Calcular operaciones contables (usando el repositorio)
+          const operaciones = contabilidadRepo.buildOperacionesContables(
             pedido.detalle,
             fechaPedido
           );
 
-          // 🧱 2. Crear batch
+          // 🧱 2. Crear batch atómico
           const batch = db.batch();
 
-          // 🔁 3. Aplicar operaciones
+          // 🔁 3. Aplicar operaciones contables
           for (const op of operaciones) {
             const ref = db.doc(op.ref);
             batch.set(ref, op.data, op.options);
@@ -126,8 +122,6 @@ async function jobContableMensual() {
             `❌ Error procesando pedido ${pedidoDoc.id} | Cliente: ${clienteId} | Mes: ${mesAnio}`
           );
           console.error("🧨 Detalle:", error.message);
-
-          // ⚠️ No se marca como procesado → se reintentará en el siguiente job
         }
       }
     }
@@ -136,6 +130,18 @@ async function jobContableMensual() {
   console.log("🏁 Job Contable finalizado");
   console.log(`✅ Procesados: ${pedidosProcesados}`);
   console.log(`❌ Fallidos: ${pedidosFallidos}`);
+
+  return { pedidosProcesados, pedidosFallidos };
+}
+
+/**
+ * Cron entry point for the accounting job.
+ * Delegates to processPendingOrders() so the orchestrator can also call it directly.
+ * Cron behavior is unchanged.
+ */
+async function jobContableMensual() {
+  return processPendingOrders();
 }
 
 module.exports = jobContableMensual;
+module.exports.processPendingOrders = processPendingOrders;
