@@ -13,6 +13,7 @@ const projectRoot = getBackendRoot();
 const firestorePath = path.resolve(projectRoot, "src/lib/firestore.js");
 const firebaseAdminPath = require.resolve("firebase-admin/firestore");
 const fechasPath = path.resolve(projectRoot, "src/utils/fechas.js");
+const loaderPath = path.resolve(projectRoot, "src/catalog/loader.js");
 const repoPath = path.resolve(
   projectRoot,
   "src/repositories/contabilidad.repository.js"
@@ -23,6 +24,7 @@ let mockBatch: any;
 let mockDocRef: any;
 let mockFieldValue: any;
 let contabilidadRepo: any;
+let mockGetCategoria: any;
 
 // ── Firestore test double builders ──
 
@@ -86,6 +88,13 @@ beforeEach(() => {
     loaded: true,
   } as any;
 
+  // Mock catalog loader
+  mockGetCategoria = vi.fn();
+  Module._cache[loaderPath] = {
+    exports: { getCategoria: mockGetCategoria },
+    loaded: true,
+  } as any;
+
   delete Module._cache[repoPath];
 
   contabilidadRepo = require("../../../src/repositories/contabilidad.repository");
@@ -95,52 +104,14 @@ afterEach(() => {
   delete Module._cache[firestorePath];
   delete Module._cache[firebaseAdminPath];
   delete Module._cache[fechasPath];
+  delete Module._cache[loaderPath];
   delete Module._cache[repoPath];
   vi.restoreAllMocks();
 });
 
 describe("contabilidad.repository", () => {
   // ═══════════════════════════════════════════
-  // obtenerCategoria — Pure Logic
-  // ═══════════════════════════════════════════
-
-  describe("obtenerCategoria", () => {
-    it("returns category for matching SKU", () => {
-      const result = contabilidadRepo.obtenerCategoria("Miel * 100");
-
-      expect(result).toBe("Miel");
-    });
-
-    it("returns most specific (longest) match", () => {
-      const result = contabilidadRepo.obtenerCategoria("Canela molida");
-
-      expect(result).toBe("Canela_molida");
-    });
-
-    it("returns null when no match (with console.warn)", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const result = contabilidadRepo.obtenerCategoria(
-        "Producto Sin Categoria"
-      );
-
-      expect(result).toBeNull();
-      expect(warnSpy).toHaveBeenCalledWith(
-        "⚠️ SKU sin categoría definida: Producto Sin Categoria"
-      );
-    });
-
-    it("handles accented and uppercased names", () => {
-      const result = contabilidadRepo.obtenerCategoria(
-        "MIEL 100gr con acentos"
-      );
-
-      expect(result).toBe("Miel");
-    });
-  });
-
-  // ═══════════════════════════════════════════
-  // executeBatch
+  // buildOperacionesContables — Category via loader.getCategoria
   // ═══════════════════════════════════════════
 
   describe("executeBatch", () => {
@@ -199,6 +170,18 @@ describe("contabilidad.repository", () => {
   // ═══════════════════════════════════════════
 
   describe("buildOperacionesContables", () => {
+    beforeEach(() => {
+      // Default: mockGetCategoria returns category based on product name
+      mockGetCategoria.mockImplementation((nombre: string) => {
+        const catMap: Record<string, string> = {
+          "Miel * 100": "Miel",
+          "Canela * 100 pequeña": "Canela",
+          "Clavo * 100": "Clavo",
+        };
+        return catMap[nombre] || null;
+      });
+    });
+
     it("throws on empty or non-array items", () => {
       expect(() =>
         contabilidadRepo.buildOperacionesContables([], new Date())

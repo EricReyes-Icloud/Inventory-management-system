@@ -23,6 +23,8 @@ const CONTABILIDAD_REPO_PATH = path.resolve(
   "src/repositories/contabilidad.repository.js",
 );
 const JOB_PATH = path.resolve(PROJECT_ROOT, "src/jobs/jobContableMensual.js");
+const LOADER_PATH = path.resolve(PROJECT_ROOT, "src/catalog/loader.js");
+const SERVICE_PATH = path.resolve(PROJECT_ROOT, "src/services/contabilidad.service.js");
 
 // ── Types ──
 interface PedidoInput {
@@ -193,6 +195,43 @@ beforeAll(async () => {
   // 4. Clear cached repos so they re-require with mocked firestore/FieldValue
   delete Module._cache[VENTAS_REPO_PATH];
   delete Module._cache[CONTABILIDAD_REPO_PATH];
+  delete Module._cache[LOADER_PATH];
+  delete Module._cache[SERVICE_PATH];
+
+  // 4b. Mock catalog loader — category map for buildOperacionesContables
+  const loaderCategoryMap: Record<string, string> = {
+    "Clavo * 100": "Clavo",
+    "Clavo * 50": "Clavo",
+    "Miel * 100": "Miel",
+    "Miel * 50": "Miel",
+    "Aji * 100": "Aji",
+    "Aji * 50": "Aji",
+    "Canela * 100 pequeña": "Canela",
+    "Canela * 50 grande": "Canela",
+    "Canela * 50 mediana": "Canela",
+    "Canela * 50 pequeña": "Canela",
+    "Canela molida * 50": "Canela_molida",
+    "Canela molidad * 100": "Canela_molida",
+    "Ajo en polvo * 50": "Ajo_en_polvo",
+    "Bicarbonato * 100": "Bicarbonato",
+    "Bicarbonato * 50": "Bicarbonato",
+    "Coco * 30": "Coco",
+    "Color * 50": "Color",
+    "Comino * 50": "Comino",
+    "Copas de miel": "Miel",
+    "Frasco de miel": "Miel",
+    "Media botella miel": "Miel",
+    "Salsina * 50": "Salsina",
+    "Uva * 30": "Uva",
+  };
+  Module._cache[LOADER_PATH] = {
+    exports: {
+      getCategoria: (nombre: string) => loaderCategoryMap[nombre] || null,
+    },
+    loaded: true,
+    id: LOADER_PATH,
+    paths: [],
+  } as any;
 
   // 5. Dynamic import — the module chain now loads with mocked deps
   const jobModule = await import("../../src/jobs/jobContableMensual");
@@ -216,6 +255,8 @@ afterEach(() => {
   // Clear repo cache entries so next test gets fresh require
   delete Module._cache[VENTAS_REPO_PATH];
   delete Module._cache[CONTABILIDAD_REPO_PATH];
+  delete Module._cache[LOADER_PATH];
+  delete Module._cache[SERVICE_PATH];
   // restoreAllMocks is safe — FieldValue sentinels are plain functions, not vi.fn
   vi.restoreAllMocks();
 });
@@ -230,7 +271,7 @@ const unPedidoClavo: PedidoInput = {
   id: "pedido-001",
   pagado: true,
   contabilidadAplicada: false,
-  detalle: [{ nombre: "Clavo", cantidad: 2, subtotal: 5000 }],
+  detalle: [{ nombre: "Clavo * 100", cantidad: 2, subtotal: 5000 }],
   fechaPedido: enero2026Date,
 };
 
@@ -238,7 +279,7 @@ const unPedidoMiel: PedidoInput = {
   id: "pedido-002",
   pagado: true,
   contabilidadAplicada: false,
-  detalle: [{ nombre: "Miel", cantidad: 1, subtotal: 10000 }],
+  detalle: [{ nombre: "Miel * 100", cantidad: 1, subtotal: 10000 }],
   fechaPedido: enero2026Date,
 };
 
@@ -314,8 +355,8 @@ describe("processPendingOrders - integration", () => {
         pagado: true,
         contabilidadAplicada: false,
         detalle: [
-          { nombre: "Clavo", cantidad: 2, subtotal: 5000 },
-          { nombre: "Miel", cantidad: 1, subtotal: 10000 },
+          { nombre: "Clavo * 100", cantidad: 2, subtotal: 5000 },
+          { nombre: "Miel * 100", cantidad: 1, subtotal: 10000 },
         ],
         fechaPedido: enero2026Date,
       };
