@@ -1,12 +1,12 @@
 //-------------------------------------- INTURIS BRAIN ---------------------------------------//
-const Fuse = require("fuse.js"); // Librería Fuse.js para búsquedas aproximadas
 const { normalizarTexto } = require("../utils/normalizarTexto");
+const catalogLoader = require("../catalog/loader");
 
 // ----------------------
 // 2. Diccionario de palabras numéricas
 // ----------------------
 const numerosPalabras = {
-  uno: 1, una: 1,
+  un: 1, uno: 1, una: 1,
   dos: 2,
   tres: 3,
   cuatro: 4,
@@ -26,165 +26,29 @@ function reemplazarNumerosPalabras(texto) {
 }
 
 // ----------------------
-// 3. Productos originales
+// 3. Productos originales — REMOVED: now loaded from Firestore via catalog-loader
 // ----------------------
-const productosOriginales = [
-  "Aji * 100",
-  "Aji * 50",
-  "Ajo en polvo * 50",
-  "Bicarbonato * 100",
-  "Bicarbonato * 50",
-  "Canela * 100 pequeña",
-  "Canela * 50 grande",
-  "Canela * 50 mediana",
-  "Canela * 50 pequeña",
-  "Canela molida * 50",
-  "Canela molidad * 100",
-  "Clavo * 100",
-  "Clavo * 50",
-  "Coco * 30",
-  "Color * 50",
-  "Comino * 50",
-  "Copas de miel",
-  "Frasco de miel",
-  "Media botella miel",
-  "Miel * 100",
-  "Miel * 50",
-  "Miel jumbo * 50",
-  "Salsina * 50",
-  "Uva * 30"
-];
 
 // ----------------------
-// 4. Equivalencias
+// 4. Equivalencias — REMOVED: now built by catalog-loader from Firestore sinonimos
 // ----------------------
-const equivalencias = {
-  // =====================
-  //  AJÍ
-  // =====================
-  [normalizarTexto("aji 100")]: "Aji * 100",
-  [normalizarTexto("aji grande")]: "Aji * 100",
-  [normalizarTexto("aji pequeño")]: "Aji * 50",
-  [normalizarTexto("aji 50")]: "Aji * 50",
-  [normalizarTexto("ajies")]: "Aji * 100",
-  [normalizarTexto("ajies pequeños")]: "Aji * 50",
-  [normalizarTexto("ajies grandes")]: "Aji * 100",
-
-  // =====================
-  //  AJO EN POLVO
-  // =====================
-  [normalizarTexto("ajo en polvo")]: "Ajo en polvo * 50",
-  [normalizarTexto("ajo polvo")]: "Ajo en polvo * 50",
-  [normalizarTexto("ajo molido")]: "Ajo en polvo * 50",
-
-  // =====================
-  //  BICARBONATO
-  // =====================
-  [normalizarTexto("bicarbonato 100")]: "Bicarbonato * 100",
-  [normalizarTexto("bicarbonato grande")]: "Bicarbonato * 100",
-  [normalizarTexto("bicarbonato 50")]: "Bicarbonato * 50",
-  [normalizarTexto("bicarbonato pequeño")]: "Bicarbonato * 50",
-
-  // =====================
-  //  CANELA ENTERA
-  // =====================
-  [normalizarTexto("canela 100")]: "Canela * 100 pequeña",
-  [normalizarTexto("canela grande")]: "Canela * 50 grande",
-  [normalizarTexto("canela mediana")]: "Canela * 50 mediana",
-  [normalizarTexto("canela pequeña")]: "Canela * 50 pequeña",
-  [normalizarTexto("canela en rama")]: "Canela * 50 mediana",
-
-  // =====================
-  //  CANELA MOLIDA
-  // =====================
-  [normalizarTexto("canela molida 50")]: "Canela molida * 50",
-  [normalizarTexto("canela molida 100")]: "Canela molidad * 100",
-  [normalizarTexto("canela polvo")]: "Canela molida * 50",
-  [normalizarTexto("canela molida")]: "Canela molida * 50",
-
-  // =====================
-  //  CLAVO
-  // =====================
-  [normalizarTexto("clavo")]: "Clavo * 100",
-  [normalizarTexto("clavos")]: "Clavo * 100",
-  [normalizarTexto("clavo 100")]: "Clavo * 100",
-  [normalizarTexto("clavo grande")]: "Clavo * 100",
-  [normalizarTexto("clavo 50")]: "Clavo * 50",
-  [normalizarTexto("clavo pequeño")]: "Clavo * 50",
-  [normalizarTexto("clavos de 100")]: "Clavo * 100",
-  [normalizarTexto("clavos de 50")]: "Clavo * 50",
-
-  // =====================
-  //  COCO
-  // =====================
-  [normalizarTexto("coco")]: "Coco * 30",
-  [normalizarTexto("coco pequeño")]: "Coco * 30",
-
-  // =====================
-  //  COLOR
-  // =====================
-  [normalizarTexto("color")]: "Color * 50",
-  [normalizarTexto("color pequeño")]: "Color * 50",
-
-  // =====================
-  //  COMINO
-  // =====================
-  [normalizarTexto("comino")]: "Comino * 50",
-  [normalizarTexto("comino pequeño")]: "Comino * 50",
-
-  // =====================
-  //  MIEL
-  // =====================
-  [normalizarTexto("miel")]: "Miel * 100",
-  [normalizarTexto("miel grande")]: "Miel * 100",
-  [normalizarTexto("miel pequeña")]: "Miel * 50",
-  [normalizarTexto("miel mediana")]: "Miel * 50",
-  [normalizarTexto("frasco de miel")]: "Frasco de miel",
-  [normalizarTexto("frasco miel")]: "Frasco de miel",
-  [normalizarTexto("frasco")]: "Frasco de miel",
-  [normalizarTexto("copas de miel")]: "Copas de miel",
-  [normalizarTexto("copa de miel")]: "Copas de miel",
-  [normalizarTexto("media botella")]: "Media botella miel",
-  [normalizarTexto("botella de miel")]: "Media botella miel",
-  [normalizarTexto("miel jumbo")]: "Miel jumbo * 50",
-
-  // =====================
-  //  SALSINA
-  // =====================
-  [normalizarTexto("salsina")]: "Salsina * 50",
-  [normalizarTexto("salsina pequeña")]: "Salsina * 50",
-
-  // =====================
-  //  UVA
-  // =====================
-  [normalizarTexto("uva")]: "Uva * 30",
-  [normalizarTexto("uva pequeña")]: "Uva * 30"
-};
-
 
 // ----------------------
-// 5. Fuzzy Search
+// 5. Fuzzy Search — REMOVED: now provided by catalog-loader's Fuse index
 // ----------------------
-const fuse = new Fuse(
-  productosOriginales.map(p => ({
-    original: p,
-    normalizado: normalizarTexto(p)
-  })),
-  {
-    keys: ["normalizado"],
-    threshold: 0.55 // más tolerante
-  }
-);
 
 // ----------------------
 // 6. Interpretador del pedido
 // ----------------------
-function interpretarPedido(pedido) {
+async function interpretarPedido(pedido) {
   let textoProcesado = reemplazarNumerosPalabras(pedido);
   console.log("Texto procesado:", textoProcesado);
 
   let partes = textoProcesado.split(/,| y /i).map(p => p.trim());
   let resultados = [];
+
+  const equivalencias = catalogLoader.getEquivalencias();
+  const fuseIndex = catalogLoader.getFuseIndex();
 
   for (let parte of partes) {
     let cantidadMatch = parte.match(/\d+/);
@@ -201,9 +65,9 @@ function interpretarPedido(pedido) {
     let normalizado = normalizarTexto(textoProducto);
     console.log("Parte:", parte, "| Normalizado:", normalizado, "| Cantidad:", cantidad);
 
-    if (equivalencias[normalizado]) {
+    if (equivalencias.has(normalizado)) {
       resultados.push({
-        producto: equivalencias[normalizado],
+        producto: equivalencias.get(normalizado),
         cantidad,
         confianza: 1,
         sugerencias: []
@@ -211,18 +75,18 @@ function interpretarPedido(pedido) {
       continue;
     }
 
-    const busqueda = fuse.search(normalizado);
+    const busqueda = fuseIndex.search(normalizado);
 
     if (busqueda.length > 0 && busqueda[0].score < 0.8) {
       resultados.push({
-        producto: busqueda[0].item.original,
+        producto: busqueda[0].item.nombre,
         cantidad,
         confianza: Number((1 - busqueda[0].score).toFixed(2)),
         sugerencias: []
       });
       continue;
     } else {
-      const sugerencias = busqueda.slice(0, 3).map(r => r.item.original);
+      const sugerencias = busqueda.slice(0, 3).map(r => r.item.nombre);
       resultados.push({
         producto: "No identificado",
         cantidad,
@@ -246,7 +110,7 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
   console.log("Texto:", body);
 
   // Interpretar el pedido
-  const resultado = interpretarPedido(body);
+  const resultado = await interpretarPedido(body);
   console.log("🧠 Interpretación del mensaje:", JSON.stringify(resultado, null, 2));
 
   // Determinar el cliente

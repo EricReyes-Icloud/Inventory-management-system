@@ -5,8 +5,7 @@
 const db = require("../lib/firestore");
 const { FieldValue } = require("firebase-admin/firestore");
 const { obtenerMesAnio } = require("../utils/fechas");
-const { diccionarioCategorias } = require("../utils/diccionario");
-const { normalizarTexto } = require("../utils/normalizarTexto");
+const catalogLoader = require("../catalog/loader");
 
 // ═══════════════════════════════════════════
 // PATH BUILDERS
@@ -22,41 +21,6 @@ function pathCartonesVendidos(mesAnio) {
 
 function pathHistoricoMensual(mesAnio) {
   return `Historico_Mensual/${mesAnio}`;
-}
-
-// ═══════════════════════════════════════════
-// UTILIDADES — CATEGORIZACIÓN
-// ═══════════════════════════════════════════
-
-/**
- * Determina la categoría de un producto según su nombre.
- * Migrada desde contabilidad.service.js
- *
- * @param {string} nombre — nombre del SKU
- * @returns {string|null}
- */
-function obtenerCategoria(nombre) {
-  const skuNormalizado = normalizarTexto(nombre);
-
-  const categoriasOrdenadas = Object.keys(diccionarioCategorias)
-    .sort((a, b) => {
-      const aNorm = normalizarTexto(a.replace(/_/g, " "));
-      const bNorm = normalizarTexto(b.replace(/_/g, " "));
-      return bNorm.length - aNorm.length;
-    });
-
-  for (const categoria of categoriasOrdenadas) {
-    const categoriaNormalizada = normalizarTexto(
-      categoria.replace(/_/g, " ")
-    );
-
-    if (skuNormalizado.includes(categoriaNormalizada)) {
-      return categoria;
-    }
-  }
-
-  console.warn(`⚠️ SKU sin categoría definida: ${nombre}`);
-  return null;
 }
 
 // ═══════════════════════════════════════════
@@ -220,7 +184,7 @@ function buildOperacionesContables(items, fechaPedido) {
 
   // 2. Procesar items
   for (const it of items) {
-    const categoria = obtenerCategoria(it.nombre);
+    const categoria = catalogLoader.getCategoria(it.nombre);
     if (!categoria) continue;
 
     const sku = it.nombre.toString().trim();
@@ -430,9 +394,6 @@ async function limpiarCategoriaCartones(mesAnio, categoria) {
 // ═══════════════════════════════════════════
 
 module.exports = {
-  // Utilidades
-  obtenerCategoria,
-
   // Path builders
   pathTotalProductos,
   pathCartonesVendidos,

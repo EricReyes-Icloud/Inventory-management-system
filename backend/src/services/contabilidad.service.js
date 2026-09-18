@@ -3,6 +3,7 @@
 // Toda la interacción con Firestore está delegada a contabilidad.repository.js
 
 const contabilidadRepo = require("../repositories/contabilidad.repository");
+const catalogLoader = require("../catalog/loader");
 
 /* ================= HISTÓRICO MENSUAL ================= */
 
@@ -87,6 +88,6 @@ async function generarHistoricoMensual(mesAnio, admin) {
 
 module.exports = {
   generarHistoricoMensual,
-  obtenerCategoria: contabilidadRepo.obtenerCategoria,
+  obtenerCategoria: catalogLoader.getCategoria,
   buildOperacionesContables: contabilidadRepo.buildOperacionesContables,
 };

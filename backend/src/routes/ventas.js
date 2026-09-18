@@ -4,6 +4,7 @@ const router = express.Router();
 const { interpretarPedido } = require("../brain/inturis");
 const ventasRepo = require("../repositories/ventas.repository");
 const productosRepo = require("../repositories/productos.repository");
+const catalogLoader = require("../catalog/loader");
 
 /**
  * Normaliza texto: lower case + quita tildes.
@@ -47,7 +48,7 @@ router.post("/pedido-libre", async (req, res) => {
     if (!productosInterpretados || productosInterpretados.length === 0) {
       return res.status(400).json({
         error: "ningun_producto_identificado",
-        sugerencias: Object.values(require("../utils/diccionario").diccionarioCategorias).flat(),
+        sugerencias: Array.from(catalogLoader.getCatalog().keys()),
       });
     }
 
