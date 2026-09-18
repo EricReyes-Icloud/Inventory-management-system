@@ -82,6 +82,35 @@ async function buscarSubcoleccion(nombreSubcoleccion) {
   return subcolSnap.docs[0];
 }
 
+/**
+ * Bulk read of all products including sinonimos and categoria fields.
+ * Returns a flat array of product objects for catalog loading.
+ * @returns {Promise<Array<{nombre: string, sinonimos: string[], categoria: string|null}>>}
+ */
+async function getCatalogo() {
+  const productosSnap = await db.collection("Productos").get();
+  const catalogo = [];
+
+  for (const productoDoc of productosSnap.docs) {
+    const subcollections = await productoDoc.ref.listCollections();
+    for (const subcol of subcollections) {
+      const subcolSnap = await subcol.get();
+      if (subcolSnap.empty) continue;
+
+      const firstDoc = subcolSnap.docs[0];
+      const data = firstDoc.data();
+
+      catalogo.push({
+        nombre: subcol.id,
+        sinonimos: Array.isArray(data.sinonimos) ? data.sinonimos : [],
+        categoria: data.categoria || null,
+      });
+    }
+  }
+
+  return catalogo;
+}
+
 // ═══════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════
@@ -90,4 +119,5 @@ module.exports = {
   getProducto,
   getAllProductos,
   buscarSubcoleccion,
+  getCatalogo,
 };
