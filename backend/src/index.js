@@ -52,8 +52,20 @@ app.get("/api/ping", (req, res) =>
 // Definimos nuestro puerto principal
 const PORT = process.env.PORT || 4000;
 
-// Iniciamos el servidor
-app.listen(PORT, () => {
-  console.log(`Server listening on:${PORT}`);
-});
+// ── Boot: load catalog from Firestore before serving requests ──
+const catalogLoader = require("./catalog/loader");
+
+(async () => {
+  try {
+    await catalogLoader.init();
+    console.log("[boot] Catalog loaded successfully");
+  } catch (err) {
+    console.error("[boot] FATAL: Failed to load catalog from Firestore:", err.message || err);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server listening on:${PORT}`);
+  });
+})();
 

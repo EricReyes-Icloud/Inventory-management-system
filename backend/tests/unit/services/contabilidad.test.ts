@@ -18,8 +18,8 @@ const mockGetSkusTotalProductos = vi.fn();
 const mockGetCategoriasCartonesVendidos = vi.fn();
 const mockGetSkusCartonesVendidos = vi.fn();
 const mockSetHistoricoMensual = vi.fn();
-const mockObtenerCategoria = vi.fn();
 const mockBuildOperacionesContables = vi.fn();
+const mockGetCategoria = vi.fn();
 
 let contabilidadService: any;
 
@@ -61,7 +61,7 @@ beforeEach(() => {
   mockGetCategoriasCartonesVendidos.mockReset();
   mockGetSkusCartonesVendidos.mockReset();
   mockSetHistoricoMensual.mockReset();
-  mockObtenerCategoria.mockReset();
+  mockGetCategoria.mockReset();
   mockBuildOperacionesContables.mockReset();
 
   // Default mocks: no duplicate, empty data
@@ -84,8 +84,19 @@ beforeEach(() => {
       getCategoriasCartonesVendidos: mockGetCategoriasCartonesVendidos,
       getSkusCartonesVendidos: mockGetSkusCartonesVendidos,
       setHistoricoMensual: mockSetHistoricoMensual,
-      obtenerCategoria: mockObtenerCategoria,
       buildOperacionesContables: mockBuildOperacionesContables,
+    },
+    loaded: true,
+  } as any;
+
+  // Pre-seed catalog.loader in Module._cache
+  const loaderPath = path.resolve(
+    projectRoot,
+    "src/catalog/loader.js"
+  );
+  Module._cache[loaderPath] = {
+    exports: {
+      getCategoria: mockGetCategoria,
     },
     loaded: true,
   } as any;
@@ -104,6 +115,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   const modules = [
     "src/repositories/contabilidad.repository.js",
+    "src/catalog/loader.js",
     "src/services/contabilidad.service.js",
   ];
   for (const mod of modules) {
@@ -129,8 +141,8 @@ describe("contabilidad.service exports", () => {
     }
   });
 
-  it("delegates obtenerCategoria to contabilidad.repository", () => {
-    expect(contabilidadService.obtenerCategoria).toBe(mockObtenerCategoria);
+  it("delegates obtenerCategoria to catalogLoader.getCategoria", () => {
+    expect(contabilidadService.obtenerCategoria).toBe(mockGetCategoria);
   });
 
   it("delegates buildOperacionesContables to contabilidad.repository", () => {
