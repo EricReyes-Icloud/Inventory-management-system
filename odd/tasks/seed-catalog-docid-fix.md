@@ -73,7 +73,7 @@ Check: read back the header.
 | T4 | S6,S7 | inline | Add `npm run seed:catalog` at root and fix the script header | ✅ | D9 — `npm run seed:catalog -- --dry-run` works from repo root and from an unrelated cwd; header at `:9-14` |
 | T5 | all | inline | Full suite + real dry-run through the npm script | ✅ | D9/D10 — full suite 187/187 (20 files); dry-run byte-identical to baseline (24/53/12, exit 0) |
 | T6 | all | delegated | Independent verification (high risk: writes production data) | ✅ | D9 — PASS, S1-S7 all PASS, 0 blockers, suite 184/184 |
-| T7 | all | inline | Work-unit commit | ☐ | Closed by this commit; its hash is recorded in the post-commit Log entry (decided by the maintainer) — staging scope includes `backend/tests/unit/scripts/seed-sinonimos.verify.test.ts` (T8) |
+| T7 | all | inline | Work-unit commit | ✅ | `5732bd9` `fix(scripts): merge seed catalog onto the existing product document` — 7 files, 562 insertions(+), 26 deletions(-) |
 | T8 | S1,S3,S4 | inline | Adopt the verifier's independent regression suite (scope addition authorized by the maintainer after T6) | ✅ | 24/24 focused, 187/187 full suite, 20 files |
 
 ## Log
@@ -209,15 +209,17 @@ dry-run only, per the production safety gate below. The D7 permission fix is con
 
 **L9 (user, verbatim):** "Si solo haz T7 y despues ahi si te indico que sigue."
 
-**D11 — T7 executed (2026-10-19).** The maintainer authorized T7 alone; the post-commit step
-(re-running `npm run test:ci` over the committed tree and recording T7's commit hash here) and every
-backlog item stay outside this commit. Staged exactly: `scripts/seed-sinonimos.js`,
+**D11 — T7 executed (2026-10-19).** T7 landed as `5732bd9ff4a250c8c3e2ea2f201a2fbada822845`,
+`fix(scripts): merge seed catalog onto the existing product document`, 7 files staged, 562
+insertions / 26 deletions. Staged exactly: `scripts/seed-sinonimos.js`,
 `backend/tests/unit/scripts/seed-sinonimos.test.ts`,
 `backend/tests/unit/scripts/seed-sinonimos.verify.test.ts`,
 `backend/tests/helpers/firestoreMock.ts`, `backend/tests/helpers/firestoreMockTypes.ts`,
 `package.json`, `odd/tasks/seed-catalog-docid-fix.md`. Deliberately NOT staged: `.atl/.skill-registry
 .cache.json`, `.atl/skill-registry.md`, `AGENTS.md` — maintainer edits unrelated to this change.
-T1-T5 checkboxes were closed here because D9's independent verification is the evidence that
-proves each one; T7's own row stays open until the maintainer decides whether the hash needs a
-follow-up commit. **D6 is still unresolved:** the 0/`>1`-documents guard and the single atomic batch
-go beyond the literal request and have not been reviewed explicitly by the maintainer.
+Full suite before the commit: 20 files / 187 tests passing; after the commit, over the committed
+tree: the same 187/187. T1-T5 checkboxes were closed here because D9's independent verification is
+the evidence that proves each one. The maintainer authorized T7 alone (L9), so nothing else moved:
+no push, no PR, no real seed run. **D6 is still unresolved:** the 0/`>1`-documents guard and the
+single atomic batch go beyond the literal request and have not been reviewed explicitly by the
+maintainer.
