@@ -1,11 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
+import { createMockDb, buildMockStore } from "../../helpers/firestoreMock";
 
 /**
  * Test suite for scripts/seed-sinonimos.js — the one-time migration script.
  *
- * These tests verify the snapshot data (53 synonyms, 12 categories)
- * without requiring Firestore. The script exports its snapshot data
- * and a dry-run function for testing.
+ * These tests verify the snapshot data (53 synonyms, 12 categories) without
+ * requiring Firestore, plus the write path through an injected mock db
+ * (seedCatalog). The script exports its snapshot data, a dry-run function and
+ * the injectable seedCatalog for testing.
  */
 
 // Import the script's snapshot data
@@ -147,5 +149,124 @@ describe("seed-sinonimos --dry-run", () => {
     const writes = script.dryRun();
 
     expect(writes).toHaveLength(24);
+  });
+});
+
+// ═══════════════════════════════════════════
+// WRITE PATH — merge onto the EXISTING document (production blocker regression)
+// ═══════════════════════════════════════════
+
+const PRODUCTOS_ROOT = "Productos/Productos_ID";
+
+/**
+ * Existing document-ID pattern, taken from the docstring in
+ * `productos.repository.js` (docId example: "Clavo_1").
+ *
+ * This matters: a Firestore collection query without orderBy is ordered by
+ * document ID, and " " (0x20) sorts before "_" (0x5F). So a document named
+ * after the product ("Aji * 100") wins the first position over the real
+ * "Aji_1" document — and the reader takes docs[0]. That is the production bug.
+ */
+function existingDocId(product: string): string {
+  return `${product.split(" * ")[0]}_1`;
+}
+
+function buildProductosStore(products: string[]): Record<string, any> {
+  const store: Record<string, any> = {};
+  for (const product of products) {
+    store[`${PRODUCTOS_ROOT}/${product}/${existingDocId(product)}`] = {
+      "Precio carton": 5000,
+      existencia: 10,
+    };
+  }
+  return store;
+}
+
+function scenarioWith(store: Record<string, any>) {
+  const { mockDb, refs } = createMockDb();
+  buildMockStore({ products: store }, mockDb, refs);
+  return { mockDb, refs };
+}
+
+describe("seedCatalog write path", () => {
+  let script: any;
+  let products: string[];
+
+  beforeAll(() => {
+    script = require(scriptPath);
+    products = Object.keys(script.SNAPSHOT_SYNONYMS);
+  });
+
+  function writtenPaths(refs: any): string[] {
+    return refs.batchSet.mock.calls.map((call: any[]) => call[0].path);
+  }
+
+  it("targets the document that already exists, never one named after the product", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products));
+
+    await script.seedCatalog(mockDb, script.dryRun());
+
+    const paths = writtenPaths(refs);
+    expect(paths).toHaveLength(24);
+
+    for (const product of products) {
+      expect(paths).toContain(`${PRODUCTOS_ROOT}/${product}/${existingDocId(product)}`);
+      expect(paths).not.toContain(`${PRODUCTOS_ROOT}/${product}/${product}`);
+    }
+  });
+
+  it("merges so existing fields (price, stock) survive", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products));
+
+    await script.seedCatalog(mockDb, script.dryRun());
+
+    for (const call of refs.batchSet.mock.calls) {
+      expect(call[2]).toEqual({ merge: true });
+    }
+  });
+
+  it("writes the snapshot sinonimos and categoria for each product", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products));
+
+    await script.seedCatalog(mockDb, script.dryRun());
+
+    const byPath = new Map<string, any>(
+      refs.batchSet.mock.calls.map((call: any[]) => [call[0].path, call[1]])
+    );
+    const ajiPath = `${PRODUCTOS_ROOT}/Aji * 100/${existingDocId("Aji * 100")}`;
+    expect(byPath.get(ajiPath)).toEqual({
+      sinonimos: script.SNAPSHOT_SYNONYMS["Aji * 100"],
+      categoria: "Aji",
+    });
+  });
+
+  it("commits every write in a single batch", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products));
+
+    await script.seedCatalog(mockDb, script.dryRun());
+
+    expect(refs.batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts without writing when a subcollection has no document", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products.slice(1)));
+
+    await expect(script.seedCatalog(mockDb, script.dryRun())).rejects.toThrow(
+      /no documents/
+    );
+    expect(refs.batchSet).not.toHaveBeenCalled();
+    expect(refs.batchCommit).not.toHaveBeenCalled();
+  });
+
+  it("aborts without writing when a subcollection is ambiguous (more than one document)", async () => {
+    const store = buildProductosStore(products);
+    store[`${PRODUCTOS_ROOT}/Clavo * 100/Clavo_2`] = { "Precio carton": 9999 };
+    const { mockDb, refs } = scenarioWith(store);
+
+    await expect(script.seedCatalog(mockDb, script.dryRun())).rejects.toThrow(
+      /more than one document/
+    );
+    expect(refs.batchSet).not.toHaveBeenCalled();
+    expect(refs.batchCommit).not.toHaveBeenCalled();
   });
 });

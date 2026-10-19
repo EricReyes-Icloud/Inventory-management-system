@@ -32,6 +32,11 @@ export interface Scenario {
   cartonesVendidos?: Record<string, any>;
   historicoMensual?: Record<string, any | null>;
   invertir?: Record<string, CostosInput>;
+  /**
+   * Flat map of path → data for the `Productos/Productos_ID/...` tree,
+   * e.g. `{ "Productos/Productos_ID/Aji * 100/Aji_1": { "Precio carton": 5000 } }`.
+   */
+  products?: Record<string, any>;
 }
 
 export interface MockRefs {

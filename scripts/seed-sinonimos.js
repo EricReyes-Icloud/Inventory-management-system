@@ -6,10 +6,32 @@
  * SNAPSHOT: This data was extracted from inturis.js (equivalencias map)
  * and diccionario.js (diccionarioCategorias) at authoring time (2026-09-18).
  *
- * Usage:
- *   node scripts/seed-sinonimos.js --dry-run   # Preview writes without touching Firestore
- *   node scripts/seed-sinonimos.js             # Execute writes (requires Firebase credentials)
+ * Usage (run from the repo root):
+ *   npm run seed:catalog -- --dry-run   # Preview the writes; never touches Firestore
+ *   npm run seed:catalog                # Execute the writes
+ *
+ * Credentials come from backend/src/secrets/serviceAccountKey.json — the same
+ * file backend/src/lib/firestore.js uses. No environment variables required.
  */
+
+const path = require("path");
+
+// firebase-admin lives in the backend workspace's node_modules, so this
+// root-level script cannot resolve it by bare name. Resolve it explicitly
+// instead of requiring NODE_PATH in the environment.
+const BACKEND_NODE_MODULES = path.join(__dirname, "..", "backend", "node_modules");
+const SERVICE_ACCOUNT_PATH = path.join(
+  __dirname,
+  "..",
+  "backend",
+  "src",
+  "secrets",
+  "serviceAccountKey.json"
+);
+
+function requireFromBackend(name) {
+  return require(require.resolve(name, { paths: [BACKEND_NODE_MODULES] }));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SNAPSHOT DATA — extracted at authoring time from inturis.js + diccionario.js
@@ -112,31 +134,80 @@ function dryRun() {
 // FIRESTORE WRITES (only executed when NOT in dry-run mode)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function executeSeed() {
-  // Lazy-load firebase-admin only when actually writing
-  const admin = require("firebase-admin");
-
-  if (!admin.apps.length) {
-    admin.initializeApp();
-  }
-
-  const db = admin.firestore();
+/**
+ * Applies the seed writes against an injected Firestore db.
+ * Exported so the write path can be tested without touching Firestore.
+ *
+ * Each subcollection holds exactly one product document, and the readers
+ * (`productos.repository.js`: `buscarSubcoleccion`, `getCatalogo`) take the
+ * FIRST document of the subcollection. Writing to `.doc(product)` would create
+ * a second document whose ID sorts before the real one — a collection query
+ * without orderBy is ordered by document ID, and " " (0x20) sorts before "_"
+ * (0x5F) — so the readers would then return a document with no price fields.
+ * That is exactly the production bug (price 0 on 18 products).
+ *
+ * Therefore: resolve the document that already exists, refuse to guess when the
+ * subcollection is empty or ambiguous, and write everything in one batch.
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {Array<{product: string, sinonimos: string[], categoria: string|null}>} entries
+ * @returns {Promise<number>} number of documents written
+ */
+async function seedCatalog(db, entries) {
   const COLRef = db.collection("Productos").doc("Productos_ID");
 
-  let writeCount = 0;
+  // ── Phase 1: resolve the existing document for every product (reads only) ──
+  const plan = [];
 
-  for (const [product, sinonimos] of Object.entries(SNAPSHOT_SYNONYMS)) {
-    const categoria = SNAPSHOT_CATEGORIES[product] || null;
+  for (const { product, sinonimos, categoria } of entries) {
+    const subcolSnap = await COLRef.collection(product).get();
 
-    await COLRef.collection(product).doc(product).set(
-      {
-        sinonimos,
-        categoria,
-      },
-      { merge: true }
-    );
+    if (subcolSnap.empty) {
+      throw new Error(
+        `Seed aborted: subcollection "${product}" has no documents; refusing to create one.`
+      );
+    }
 
-    writeCount++;
+    if (subcolSnap.size !== 1) {
+      throw new Error(
+        `Seed aborted: subcollection "${product}" has more than one document ` +
+          `(${subcolSnap.size}); expected exactly 1. Resolve it manually before seeding.`
+      );
+    }
+
+    plan.push({
+      ref: subcolSnap.docs[0].ref,
+      data: { sinonimos, categoria },
+    });
+  }
+
+  // ── Phase 2: one atomic batch, so a failure leaves Firestore untouched ──
+  const batch = db.batch();
+
+  for (const { ref, data } of plan) {
+    batch.set(ref, data, { merge: true });
+  }
+
+  await batch.commit();
+
+  return plan.length;
+}
+
+async function executeSeed() {
+  // Lazy-load firebase-admin only when actually writing
+  const admin = requireFromBackend("firebase-admin");
+
+  if (!admin.apps.length) {
+    // Same credential source as backend/src/lib/firestore.js — not ADC.
+    admin.initializeApp({
+      credential: admin.credential.cert(require(SERVICE_ACCOUNT_PATH)),
+    });
+  }
+
+  const entries = dryRun();
+  const writeCount = await seedCatalog(admin.firestore(), entries);
+
+  for (const { product, sinonimos, categoria } of entries) {
     console.log(`  ✅ ${product}: ${sinonimos.length} sinonimos, categoria=${categoria}`);
   }
 
@@ -181,4 +252,5 @@ module.exports = {
   SNAPSHOT_SYNONYMS,
   SNAPSHOT_CATEGORIES,
   dryRun,
+  seedCatalog,
 };

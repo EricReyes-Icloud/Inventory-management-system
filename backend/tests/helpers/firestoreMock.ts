@@ -394,6 +394,10 @@ export function buildMockStore(
     populateCollection(store, scenario.totalProductos);
   }
 
+  if (scenario.products) {
+    populateCollection(store, scenario.products);
+  }
+
   if (scenario.cartonesVendidos) {
     populateCollection(store, scenario.cartonesVendidos);
   }
