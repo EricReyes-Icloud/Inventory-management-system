@@ -102,7 +102,7 @@ async function interpretarPedido(pedido) {
 // ----------------------
 // 7. Procesador Twilio
 // ----------------------
-const axios = require("axios");
+const { crearPedidoLibre } = require("../services/ventas.service");
 
 async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
   console.log("📩 Mensaje recibido desde Twilio:");
@@ -117,20 +117,24 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
   const cliente = clienteDetectado || "Desconocido";
   const mensaje = body;
 
-  // Enviar pedido a /pedido-libre (ventas.js)
+  // Registrar pedido directamente vía servicio (sin llamada HTTP)
+  let pedidoRegistrado = false;
   try {
-    const response = await axios.post("http://localhost:4000/api/ventas/pedido-libre", {
-      cliente,
-      mensaje,
-    });
-
-    console.log("📦 Pedido registrado exitosamente:", response.data);
+    const result = await crearPedidoLibre({ cliente, mensaje });
+    if (result.ok) {
+      console.log("📦 Pedido registrado exitosamente:", result.body);
+      pedidoRegistrado = true;
+    } else {
+      console.error("❌ Error registrando pedido:", result.body);
+      pedidoRegistrado = false;
+    }
   } catch (error) {
-    console.error("❌ Error enviando pedido a /api/ventas/pedido-libre:", error.response?.data || error.message);
+    console.error("❌ Error registrando pedido:", error.message || error);
+    pedidoRegistrado = false;
   }
 
   // Retornar información útil (por si el webhook la usa)
-  return { cliente, resultado };
+  return { cliente, resultado, pedidoRegistrado };
 }
 
 // Exportamos ambas funciones
