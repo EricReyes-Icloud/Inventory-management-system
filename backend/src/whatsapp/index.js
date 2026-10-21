@@ -92,6 +92,13 @@ router.post("/webhook", async (req, res) => {
       return res.end(twiml.toString());
     }
 
+    if (interpretacion.pedidoRegistrado === false) {
+      console.log("⚠️ No se pudo registrar el pedido.");
+      twiml.message("⚠️ No pudimos registrar tu pedido. Por favor, intenta más tarde y comunícate con servicio técnico de inmediato.");
+      res.writeHead(200, { "Content-Type": "text/xml" });
+      return res.end(twiml.toString());
+    }
+
     // Responder con confirmación
     twiml.message(`✅ Pedido recibido correctamente${clienteDetectado ? `, ${clienteDetectado}` : ""}. ¡Gracias por tu mensaje!`);
     res.writeHead(200, { "Content-Type": "text/xml" });

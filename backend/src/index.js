@@ -50,7 +50,7 @@ app.get("/api/ping", (req, res) =>
 );
 
 // Definimos nuestro puerto principal
-const PORT = process.env.PORT || 4000;
+const { port: PORT } = require("./config");
 
 // ── Boot: load catalog from Firestore before serving requests ──
 const catalogLoader = require("./catalog/loader");
