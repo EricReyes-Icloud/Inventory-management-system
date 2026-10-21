@@ -1,70 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const admin = require("firebase-admin");
-const adminRepo = require("../repositories/admin.repository");
+const { adminAuth } = require("../middlewares/adminAuth");
 const orchestrator = require("../services/monthlyClosing.orchestrator");
-
-/**
- *  Validacion admin 
-**/
-
-// Definimos un middleware
-
-async function adminAuth(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) { // Validamos formato correcto
-      return res.status(401).json({
-        ok: false,
-        message: "Token no proporcionado",
-      });
-    }
-
-    const token = authHeader.split(" ")[1]; // Extraemos el Token con posicion [1]
-
-    // Verificar token Firebase
-    const decodedToken = await admin.auth().verifyIdToken(token);
-
-    const email = decodedToken.email; // Extraemos el email del usuario
-
-    if (!email) {
-      return res.status(403).json({ // Autenticado pero no autorizado correctamente
-        ok: false,
-        message: "Token inválido (sin email)",
-      });
-    }
-
-    /* Buscar en colección Admin
-       No confiamos solo en el Token, tambien buscamos en nuestra DB */
-    const adminSnap = await adminRepo.getAdminByEmail(email);
-
-    if (adminSnap.empty) {
-      return res.status(403).json({
-        ok: false,
-        message: "No tienes permisos de administrador",
-      });
-    }
-
-    // Guardamos datos del admin en request
-    req.admin = {
-      uid: decodedToken.uid,
-      email,
-      nombre: adminSnap.docs[0].data().Nombre,
-    };
-
-    next();
-
-  } catch (error) {
-    console.error("❌ Error validando admin:", error.message);
-
-    return res.status(401).json({
-      ok: false,
-      message: "No autorizado",
-    });
-  }
-}
-
 
 /**
  * POST /admin/contabilidad/cerrar-mes

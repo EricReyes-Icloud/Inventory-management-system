@@ -235,100 +235,138 @@ POST /api/whatsapp/webhook
 /api/admin
 ```
 
-### GET `/api/admin`
+Todas las rutas de administración exigen autenticación. Hay dos mecanismos y
+cada endpoint usa el que corresponde a su tipo de cliente:
 
-Obtiene reportes operativos y financieros.
+| Mecanismo | Header | Fuente del secreto |
+|---|---|---|
+| `requireAdminToken` | `Authorization: Bearer <token>` | variable de entorno `ADMIN_TOKEN` |
+| `adminAuth` | `Authorization: Bearer <firebase id token>` | token de Firebase + verificación del rol en la colección de administradores |
+
+---
+
+### POST `/api/admin/job-contable`
+
+Ejecuta el job contable mensual.
 
 ### Solicitud (Request)
 
 ```http
-GET /api/admin
+POST /api/admin/job-contable
+Authorization: Bearer <ADMIN_TOKEN>
 ```
-
----
 
 ### Respuesta (Response)
 
 ```json
 {
-  "ventas": [],
-  "inventario": [],
-  "ganancias": []
+  "ok": true,
+  "mensaje": "Job contable ejecutado correctamente"
 }
 ```
-
----
 
 ### Posibles errores
 
 | Status | Description |
 |---|---|
-| 401 | No autorizado |
-| 500 | Internal server error |
+| 401 | Header ausente, token incorrecto o `ADMIN_TOKEN` no configurado |
+| 500 | Error ejecutando el job |
 
 ---
 
-### Validaciones
+### POST `/api/admin/recargar-catalogo`
 
-- Acceso restringido a administradores
-
----
-
-### API del botón de administración
-
-### Ruta base
-
-```text
-/api/admin/buttons
-```
-
----
-
-### POST `/api/admin/buttons`
-
-Procesa acciones administrativas disparadas desde botones operativos del sistema.
+Recarga el catálogo desde Firestore en runtime.
 
 ### Solicitud (Request)
 
 ```http
-POST /api/admin/buttons/action
+POST /api/admin/recargar-catalogo
+Authorization: Bearer <ADMIN_TOKEN>
+```
+
+### Respuesta (Response)
+
+```json
+{
+  "success": true,
+  "productos": 24
+}
+```
+
+### Posibles errores
+
+| Status | Description |
+|---|---|
+| 401 | Header ausente, token incorrecto o `ADMIN_TOKEN` no configurado |
+| 500 | Error recargando el catálogo (el catálogo anterior sigue activo) |
+
+---
+
+### POST `/api/admin/cerrar-mes`
+
+Cierra la contabilidad del mes indicado.
+
+### Solicitud (Request)
+
+```http
+POST /api/admin/cerrar-mes
+Authorization: Bearer <firebase-id-token>
+Content-Type: application/json
 ```
 
 ### Body
 
 ```json
 {
-  "action": "cierre_mensual"
+  "mesAnio": "Febrero de 2026"
 }
 ```
-
----
-
-### Respuesta (Response)
-
-```json
-{
-  "message": "Acción ejecutada correctamente"
-}
-```
-
----
 
 ### Posibles errores
 
 | Status | Description |
 |---|---|
-| 400 | Datos inválidos |
-| 401 | No autorizado |
-| 500 | Internal server error |
+| 401 | Token no proporcionado o inválido |
+| 403 | El usuario autenticado no es administrador |
+| 400 | `mesAnio` ausente |
 
 ---
 
-### Validaciones
+### POST `/admin/cerrar-categoria`
 
-- Acción requerida
-- Acción permitida
-- Validación de permisos
+Cierra la contabilidad de una categoría.
+
+> Ruta base `/admin` (no `/api/admin`).
+
+### Solicitud (Request)
+
+```http
+POST /admin/cerrar-categoria
+Authorization: Bearer <firebase-id-token>
+Content-Type: application/json
+```
+
+### Body
+
+```json
+{
+  "mesAnio": "Junio 2026",
+  "categoria": "Salsas"
+}
+```
+
+El nombre del administrador que queda en la auditoría se toma del token
+verificado, no del body: el cliente no puede escribir el nombre que se
+registra.
+
+### Posibles errores
+
+| Status | Description |
+|---|---|
+| 401 | Token no proporcionado o inválido |
+| 403 | El usuario autenticado no es administrador |
+| 400 | `mesAnio` o `categoria` ausentes |
 
 ---
 
@@ -349,14 +387,36 @@ La API utiliza una estructura estándar para errores.
 
 ## Autenticación
 
-Actualmente el sistema se encuentra en proceso de evolución hacia un modelo de autenticación más robusto.
+Cada ruta valida al cliente según el tipo de llamada que espera.
 
-### Mejoras previstas
+### Mecanismos
 
-- Autenticación JWT
-- Acceso basado en roles
-- Validación de sesiones
-- Puntos de acceso de administración seguros
+| Mecanismo | Rutas | Credencial |
+|---|---|---|
+| Firma de Twilio | `POST /api/whatsapp/webhook` | `X-Twilio-Signature` + `TWILIO_AUTH_TOKEN` |
+| Allowlist de remitente | `POST /api/whatsapp/webhook` | el `From` debe ser uno de los administradores autorizados |
+| Token interno | `POST /api/ventas/pedido-libre` | header `x-internal-token` |
+| Token de administrador | `POST /api/admin/job-contable`, `POST /api/admin/recargar-catalogo` | `Authorization: Bearer <ADMIN_TOKEN>` |
+| Token de Firebase + rol | `POST /api/admin/cerrar-mes`, `POST /admin/cerrar-categoria` | `Authorization: Bearer <firebase id token>` |
+
+Todos fallan cerrados: si la variable de entorno o la credencial no está
+configurada, la ruta rechaza la llamada en lugar de dejarla abierta.
+
+### CORS
+
+Las peticiones de browser están limitadas a los orígenes de
+`CORS_ALLOWED_ORIGINS` (lista separada por comas). Un origen fuera de la
+lista recibe `403 origin_not_allowed` y la petición no llega al handler.
+
+Sin `CORS_ALLOWED_ORIGINS` configurado ningún origen de browser pasa: hay que
+declarar los orígenes del frontend. Las peticiones servidor a servidor
+(Twilio, curl, cron) no mandan la cabecera `Origin` y no se ven afectadas.
+
+### Rate limiting
+
+`POST /api/whatsapp/webhook` y `POST /api/ventas/pedido-libre` tienen un
+límite por ventana (`RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`). Al superarlo
+responden `429 too_many_requests`.
 
 ---
 

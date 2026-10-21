@@ -99,6 +99,54 @@ function resolvePositiveInt(raw, fallback, label) {
   return parsed;
 }
 
+/**
+ * Normaliza un origen de CORS.
+ *
+ * Un origin de browser es "esquema://host[:puerto]", sin path ni barra final.
+ * La comparación tiene que ser exacta: "https://app.com" y "https://app.com/"
+ * son el mismo origen, y "https://app.com.evil.com" es otro distinto.
+ *
+ * @param {string|undefined|null} value
+ * @returns {string} origen normalizado, "" si no hay valor, "*" si es el comodín
+ */
+function normalizeOrigin(value) {
+  const trimmed = String(value ?? "").trim();
+
+  if (trimmed === "") return "";
+  if (trimmed === "*") return "*";
+
+  try {
+    // URL normaliza esquema y host a minúsculas y descarta el puerto por
+    // defecto y el path.
+    return new URL(trimmed).origin;
+  } catch {
+    // Origen inválido: se conserva tal cual (sin barra final) para que el
+    // error sea visible en la comparación y no se acepte por accidente.
+    return trimmed.replace(/\/+$/, "");
+  }
+}
+
+/**
+ * Parsea la lista de orígenes permitidos de CORS.
+ *
+ * Acepta: undefined, null o string vacío → lista vacía (fail closed).
+ * Acepta: lista separada por comas; cada entrada se recorta y se normaliza.
+ *
+ * @param {string|undefined|null} raw
+ * @returns {string[]} lista de orígenes normalizados
+ */
+function parseAllowedOrigins(raw) {
+  if (raw === undefined || raw === null) return [];
+
+  const value = String(raw).trim();
+  if (value === "") return [];
+
+  return value
+    .split(",")
+    .map(normalizeOrigin)
+    .filter((origin) => origin !== "");
+}
+
 // Rate limiting de los endpoints de creación de pedidos, resuelto una vez por
 // proceso igual que el puerto.
 const rateLimit = {
@@ -114,6 +162,15 @@ const rateLimit = {
   ),
 };
 
+// Orígenes permitidos para CORS (S5), resueltos una vez por proceso.
+//
+// Fail closed: sin CORS_ALLOWED_ORIGINS la lista queda vacía y el backend
+// rechaza TODOS los orígenes de navegador. El tráfico servidor a servidor
+// (Twilio, curl, cron) no manda la cabecera Origin y sigue entrando normal.
+const cors = {
+  allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
+};
+
 module.exports = {
   port,
   resolvePort,
@@ -123,4 +180,7 @@ module.exports = {
   resolvePositiveInt,
   DEFAULT_RATE_LIMIT_WINDOW_MS,
   DEFAULT_RATE_LIMIT_MAX,
+  cors,
+  parseAllowedOrigins,
+  normalizeOrigin,
 };

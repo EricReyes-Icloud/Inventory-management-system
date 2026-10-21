@@ -46,7 +46,7 @@ Check: Inspection.
 | T2 | S2 | inline | Enforce admin phone allowlist: check `From` against `Usuarios/Usuarios/Admin`, `Admin_2`, `Admin_3` by `Telefono`. Allow only the 3 authorized admin numbers. Reject others safely. | ✅ | Same file → S2 block (5 cases: not in allowlist, allowlisted but not admin, the 3 admins accepted, E.164 normalization, missing `From`). |
 | T3 | S3 | inline | Restrict `/api/ventas/pedido-libre` (require `x-internal-token`). | ✅ | `backend/tests/integration/ventas.test.ts` → `internal token` block (3 cases: missing token, wrong token, `INTERNAL_API_TOKEN` not configured). No in-repo caller breaks: the endpoint has no frontend caller. |
 | T4 | S4 | inline | Add rate limiting middleware for webhook and pedido-libre. | ✅ | `backend/tests/unit/whatsapp/webhook.ratelimit.test.ts` (4 casos: hasta el máximo, 429 al exceder, presupuesto separado por admin, el 403 previo no consume presupuesto) + `backend/tests/integration/ventas.test.ts` bloque `rate limit` (3 casos: hasta el máximo, 429 sin escribir el pedido, el 403 por token no consume presupuesto) + `backend/tests/unit/config.test.ts` (10 casos de `resolvePositiveInt` y `config.rateLimit`). Suite **228/228, 23 archivos** (antes 211/211, 22). |
-| T5 | S5,S6 | inline | Tighten CORS to allowlist. Audit admin routes. | ⏳ | — |
+| T5 | S5,S6 | inline | Tighten CORS to allowlist. Audit admin routes. | ✅ | `backend/tests/unit/cors.test.ts` (13 casos: parseo de `CORS_ALLOWED_ORIGINS` + guard por origen) + `backend/tests/integration/admin.routes.test.ts` (9 casos: `job-contable` con token de admin, `cerrar-categoria` con `adminAuth`, nombre de admin tomado del token verificado). Suite **250/250, 25 archivos** (antes 228/228, 23). |
 | T6 | all | delegated | Independent verification (high risk: security). | ⏳ | — |
 
 ## Log
@@ -95,7 +95,36 @@ Decision: close T1–T3 with their missing tests **before** starting T4/T5, beca
 - The webhook limiter is mounted **after** `authorizeAdminSender`, so the Firestore admin lookup still runs on every authenticated request. The limiter caps the expensive part (order interpretation and writes), not that lookup.
 - A 429 tells Twilio the webhook failed, so **Twilio will retry** the message. The retried request is not a duplicate order: a rate-limited request never reached the order pipeline.
 
-**Next step:** T5 (S5 + S6) — replace `cors({ origin: true })` with an allowlist from config (`CORS_ALLOWED_ORIGINS`), and audit the admin routes. See "Env vars pendientes" below.
+**D12 (2026-10-21) — T5 design: CORS con allowlist, fail closed.**
+- La allowlist vive en `config.cors.allowedOrigins` y se parsea de `CORS_ALLOWED_ORIGINS` (lista separada por comas). Cada origen se normaliza con `new URL(...).origin`: `https://app.com/` y `https://app.com` son el mismo origen, y el comodín `*` se conserva como opt-in explícito.
+- **Fail closed**: sin `CORS_ALLOWED_ORIGINS` la lista queda vacía y **todo** origen de navegador recibe 403. Es la misma decisión que el maintainer ya tomó para `ADMIN_TOKEN` (ver `openspec/changes/catalog-single-source/verify-report.md`, "fails closed ... the maintainer authorized this strict behavior over the original soft-fail"), y es coherente con el encabezado de `config.js`: un valor mal configurado no debe fallar en silencio. El arranque NO se cae: el backend levanta y avisa por consola, para que un deploy sin la variable no quede mudo.
+- **Dos capas, no una.** `createCorsHeaders()` (librería `cors`) solo escribe cabeceras para orígenes permitidos; `createCorsGuard()` corta la request con 403 `origin_not_allowed` **antes** del handler. Con una sola capa el browser bloquea la lectura de la respuesta, pero el efecto del lado del servidor (escritura en Firestore) ya ocurrió. El guard lo evita.
+- **Una request sin cabecera `Origin` no es traffic de browser** (Twilio, curl, cron) y se deja pasar: CORS no aplica ahí y la protección real la dan los tokens. Verificado en runtime: el webhook sin `Origin` sigue llegando a la validación de firma de Twilio (`{"error":"forbidden"}`), no a un 403 de CORS.
+
+**D13 (2026-10-21) — Auditoría de rutas admin (S6) y qué guard usa cada una.**
+Inventario completo de las rutas del backend y su protección antes/después de T5:
+
+| Ruta | Guard antes | Guard después |
+|---|---|---|
+| `POST /api/whatsapp/webhook` | firma + allowlist + rate limit (T1-T4) | igual |
+| `POST /api/ventas/pedido-libre` | token interno + rate limit (T3-T4) | igual |
+| `POST /api/admin/job-contable` | ❌ **ninguno** | ✅ `requireAdminToken` (`ADMIN_TOKEN`) |
+| `POST /api/admin/recargar-catalogo` | ✅ `requireAdminToken` | igual |
+| `POST /api/admin/cerrar-mes` | ✅ `adminAuth` (Firebase) | igual |
+| `POST /admin/cerrar-categoria` | ❌ **ninguno** | ✅ `adminAuth` (Firebase) |
+| `GET /api/productos`, `GET /api/ping` | lectura publica | igual |
+
+La elección del guard no es arbitraria, sale de **qué tipo de cliente llama a cada endpoint**:
+- `job-contable` y `recargar-catalogo` viven en el mismo archivo (`routes/admin.js`) y se documentan como llamadas de máquina: `curl -X POST localhost:4000/api/admin/recargar-catalogo -H "Authorization: Bearer $ADMIN_TOKEN"` (ver `openspec/PR-024-catalog-single-source.md`). Mismo guard, misma variable, misma forma de invocarlo.
+- `cerrar-categoria` y `cerrar-mes` son los botones del panel admin: el usuario está autenticado en Firebase y el repo ya tiene la herramienta para eso (`backend/scripts/get-token.js` + `backend/scripts/test-cierre.sh` contra `cerrar-mes`). Por eso `adminAuth` (ID token de Firebase + verificación en la colección de administradores).
+
+**Consecuencia operativa (frontend, repo aparte):** el frontend NO vive en este repo (no existe `frontend/` en ninguna rama; el `package.json` raíz lo declara como workspace pero el código está en otro repositorio). `POST /admin/cerrar-categoria` ahora exige `Authorization: Bearer <firebase id token>`: **el botón del panel admin va a recibir 401 hasta que el repo del frontend envíe el ID token**. Es el precio de cerrar el endpoint y es parte del trabajo pendiente fuera de este repo. `POST /api/admin/job-contable` pasa a exigir `Authorization: Bearer $ADMIN_TOKEN`.
+
+**D14 (2026-10-21) — `adminAuth` se extrae a `middlewares/` y la auditoría usa el token verificado.**
+- `adminAuth` estaba definido dentro de `routes/admin.contabilidad.routes.js`, donde no podía ser reusado. Se movió tal cual a `backend/src/middlewares/adminAuth.js` (mismo comportamiento, mismos mensajes) y los dos routers lo importan. El contrato de `openspec/specs/admin.contabilidad.routes/spec.md` se mantiene: `req.admin` sigue siendo `{ uid, email, nombre }`.
+- `cerrar-categoria` tomaba `adminUsuario` **del body**, o sea que el nombre que se auditaba lo elegía el cliente. Ahora sale de `req.admin.nombre`, que viene del documento del administrador en Firestore: la auditoría no se puede falsificar desde el request.
+
+**Next step:** T6 — verificador independiente (obligatorio: high risk item 2, seguridad). Después: `gentle-ai review assess` sobre el commit de T5.
 
 ## Env vars pendientes (setear en Render/Railway antes de deploy)
 
@@ -103,7 +132,7 @@ Decision: close T1–T3 with their missing tests **before** starting T4/T5, beca
 |---|---|---|---|
 | `TWILIO_AUTH_TOKEN` | webhook | — (required) | Sin valor el webhook rechaza todo con 403. |
 | `INTERNAL_API_TOKEN` | `POST /api/ventas/pedido-libre` | — (required) | Sin valor el endpoint rechaza todo con 403. |
-| `ADMIN_TOKEN` | `POST /api/admin/recargar-catalogo` | — (required) | Bearer token, checked by `requireAdminToken`. |
+| `ADMIN_TOKEN` | `POST /api/admin/recargar-catalogo`, `POST /api/admin/job-contable` | — (required) | Bearer token, checked by `requireAdminToken`. **T5: `job-contable` también lo exige** (antes no pedía nada). |
 | `RATE_LIMIT_WINDOW_MS` | rate limit | `900000` (15 min) | T4. Tamaño de la ventana de presupuesto. |
 | `RATE_LIMIT_MAX` | rate limit | `60` | T4. Requests por ventana. `0` o un valor no entero hace fallar el arranque. |
-| `CORS_ALLOWED_ORIGINS` | cors | — | T5 (pending). Lista de orígenes permitidos. |
+| `CORS_ALLOWED_ORIGINS` | cors | — (fail closed) | T5. Lista de orígenes permitidos, separada por comas. **Sin valor: todo origen de navegador recibe 403.** Ej: `https://tu-frontend.vercel.app,http://localhost:5173`. |
