@@ -24,6 +24,12 @@ const adminContabilidadRoutes = require("./routes/admin.contabilidad.routes.js")
 
 // Creamos el servidor y permitimos que entienda json en el body
 const app = express();
+
+// El backend se despliega detrás de un proxy (Render/Railway). Sin esto,
+// req.ip es la IP del proxy y el rate limiting por IP se convierte en un
+// único bucket global para todo el sistema.
+app.set("trust proxy", 1);
+
 app.use(express.json());
 
 // Cors - permitimos que otros dominios consuman nuestra API

@@ -45,7 +45,7 @@ Check: Inspection.
 | T1 | S1 | inline | Add Twilio signature validation middleware to `/api/whatsapp/webhook`. Load auth token from env. Reject invalid/missing with 403. | ✅ | `backend/tests/unit/whatsapp/webhook.security.test.ts` → S1 block (4 cases: missing signature, invalid signature, signature for another body, token not configured) + 1 happy path. Suite 211/211. |
 | T2 | S2 | inline | Enforce admin phone allowlist: check `From` against `Usuarios/Usuarios/Admin`, `Admin_2`, `Admin_3` by `Telefono`. Allow only the 3 authorized admin numbers. Reject others safely. | ✅ | Same file → S2 block (5 cases: not in allowlist, allowlisted but not admin, the 3 admins accepted, E.164 normalization, missing `From`). |
 | T3 | S3 | inline | Restrict `/api/ventas/pedido-libre` (require `x-internal-token`). | ✅ | `backend/tests/integration/ventas.test.ts` → `internal token` block (3 cases: missing token, wrong token, `INTERNAL_API_TOKEN` not configured). No in-repo caller breaks: the endpoint has no frontend caller. |
-| T4 | S4 | inline | Add rate limiting middleware for webhook and pedido-libre. | ⏳ | — |
+| T4 | S4 | inline | Add rate limiting middleware for webhook and pedido-libre. | ✅ | `backend/tests/unit/whatsapp/webhook.ratelimit.test.ts` (4 casos: hasta el máximo, 429 al exceder, presupuesto separado por admin, el 403 previo no consume presupuesto) + `backend/tests/integration/ventas.test.ts` bloque `rate limit` (3 casos: hasta el máximo, 429 sin escribir el pedido, el 403 por token no consume presupuesto) + `backend/tests/unit/config.test.ts` (10 casos de `resolvePositiveInt` y `config.rateLimit`). Suite **228/228, 23 archivos** (antes 211/211, 22). |
 | T5 | S5,S6 | inline | Tighten CORS to allowlist. Audit admin routes. | ⏳ | — |
 | T6 | all | delegated | Independent verification (high risk: security). | ⏳ | — |
 
@@ -82,3 +82,28 @@ Decision: close T1–T3 with their missing tests **before** starting T4/T5, beca
 - webhook limiter keyed by the normalized admin sender number and placed **after** `validateTwilioSignature` + `authorizeAdminSender` (only authenticated traffic consumes the limit; the 403 path is cheap and touches no Firestore, because the allowlist is checked before the admin lookup);
 - pedido-libre limiter keyed by IP, placed **after** the `x-internal-token` check;
 - 429 on exceed, per S4.
+
+**D9 (2026-10-21) — T4 design decisions.** The design decided in the previous session was implemented as follows, with three points that needed a decision:
+- **Limiters are factories, not module-level instances.** `backend/src/middlewares/rateLimit.js` exports `createWebhookRateLimiter()` / `createPedidoLibreRateLimiter()`; each router calls its factory at module load, so each route owns its own budget. A shared instance would leak one route's traffic into the other's, and would make the budget leak across tests.
+- **The config is read lazily inside the factory.** `require("../config")` happens inside the factory, not at module load, so the limiter always sees the config module that is currently cached (tests reload it to drive a small budget).
+- **`trust proxy` was added to `backend/src/index.js`** (`app.set("trust proxy", 1)`). The backend runs behind a proxy (Render/Railway); without it `req.ip` is the proxy's IP and the IP-keyed pedido-libre limiter degenerates into a single global bucket for the whole system. It does not change the S1 signature validation, which already reads `x-forwarded-proto` / `x-forwarded-host` explicitly.
+
+**D10 (2026-10-21) — RED→GREEN evidence for T4.** RED was observed before implementing: 13 failing tests — `TypeError: resolvePositiveInt is not a function` and `Cannot read properties of undefined (reading 'windowMs')` in `config.test.ts`, and `expected 200 to be 429` in both rate limit suites. Every failure was "implementation missing", not a broken test. After implementation: **228/228 green, 23 files** (was 211/211, 22 files). No `express-rate-limit` validation warning is emitted at runtime.
+
+**D11 (2026-10-21) — Known limitations of T4 (deliberate, not bugs).**
+- The budget is in memory and **per process**: with more than one instance behind the load balancer the effective limit is multiplied by the number of instances. A shared store (Redis) would be needed for a multi-instance deployment.
+- The webhook limiter is mounted **after** `authorizeAdminSender`, so the Firestore admin lookup still runs on every authenticated request. The limiter caps the expensive part (order interpretation and writes), not that lookup.
+- A 429 tells Twilio the webhook failed, so **Twilio will retry** the message. The retried request is not a duplicate order: a rate-limited request never reached the order pipeline.
+
+**Next step:** T5 (S5 + S6) — replace `cors({ origin: true })` with an allowlist from config (`CORS_ALLOWED_ORIGINS`), and audit the admin routes. See "Env vars pendientes" below.
+
+## Env vars pendientes (setear en Render/Railway antes de deploy)
+
+| Variable | Scope | Default | Notes |
+|---|---|---|---|
+| `TWILIO_AUTH_TOKEN` | webhook | — (required) | Sin valor el webhook rechaza todo con 403. |
+| `INTERNAL_API_TOKEN` | `POST /api/ventas/pedido-libre` | — (required) | Sin valor el endpoint rechaza todo con 403. |
+| `ADMIN_TOKEN` | `POST /api/admin/recargar-catalogo` | — (required) | Bearer token, checked by `requireAdminToken`. |
+| `RATE_LIMIT_WINDOW_MS` | rate limit | `900000` (15 min) | T4. Tamaño de la ventana de presupuesto. |
+| `RATE_LIMIT_MAX` | rate limit | `60` | T4. Requests por ventana. `0` o un valor no entero hace fallar el arranque. |
+| `CORS_ALLOWED_ORIGINS` | cors | — | T5 (pending). Lista de orígenes permitidos. |

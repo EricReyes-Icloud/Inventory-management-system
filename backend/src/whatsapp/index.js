@@ -3,9 +3,14 @@ const bodyParser = require("body-parser"); //Para leer el body de la request
 const twilio = require("twilio"); //SDK de Twilio
 const { procesarMensajeTwilio } = require("../brain/inturis.js");
 const adminRepo = require("../repositories/admin.repository");
+const { createWebhookRateLimiter } = require("../middlewares/rateLimit");
 
 const router = express.Router(); // Mini-servidor modular
 router.use(bodyParser.urlencoded({ extended: false })); // Permite el formato de Twilio
+
+// El limitador va DESPUÉS de la validación de firma y de la autorización del
+// remitente: solo el tráfico autenticado consume presupuesto.
+const webhookRateLimiter = createWebhookRateLimiter();
 
 const ALLOWED_ADMIN_NUMBERS = [
   "+573138861417",
@@ -132,7 +137,7 @@ function esPedidoValido(texto) {
 }
 
 // Endpoint público de Twilio
-router.post("/webhook", validateTwilioSignature, authorizeAdminSender, async (req, res) => {
+router.post("/webhook", validateTwilioSignature, authorizeAdminSender, webhookRateLimiter, async (req, res) => {
   const twiml = new twilio.twiml.MessagingResponse();
 
   try {

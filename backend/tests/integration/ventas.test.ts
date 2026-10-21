@@ -25,6 +25,7 @@ const PRODUCTOS_REPO_PATH = path.resolve(
   "src/repositories/productos.repository.js",
 );
 const VENTAS_ROUTE_PATH = path.resolve(PROJECT_ROOT, "src/routes/ventas.js");
+const CONFIG_PATH = path.resolve(PROJECT_ROOT, "src/config.js");
 
 // ── Shared mock state ──
 let mockDb: any;
@@ -425,6 +426,101 @@ describe("POST /api/ventas/pedido-libre", () => {
       expect(mockRefs.pedidoMesSet).toHaveBeenCalled();
       expect(mockRefs.pedidosGet).toHaveBeenCalled();
       expect(mockRefs.crearPedidoSet).toHaveBeenCalled();
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────
+  // S4 — Rate limiting
+  // ──────────────────────────────────────────────────────────
+
+  describe("rate limit", () => {
+    const originalWindow = process.env.RATE_LIMIT_WINDOW_MS;
+    const originalMax = process.env.RATE_LIMIT_MAX;
+
+    beforeEach(() => {
+      process.env.RATE_LIMIT_WINDOW_MS = "900000";
+      process.env.RATE_LIMIT_MAX = "2";
+      // Reload the config module so the limiter picks up the env above.
+      delete Module._cache[CONFIG_PATH];
+    });
+
+    afterEach(() => {
+      if (originalWindow === undefined) {
+        delete process.env.RATE_LIMIT_WINDOW_MS;
+      } else {
+        process.env.RATE_LIMIT_WINDOW_MS = originalWindow;
+      }
+      if (originalMax === undefined) {
+        delete process.env.RATE_LIMIT_MAX;
+      } else {
+        process.env.RATE_LIMIT_MAX = originalMax;
+      }
+      delete Module._cache[CONFIG_PATH];
+    });
+
+    /** Registers a happy-path pedido so an accepted request writes an order. */
+    function setupHappyPath() {
+      setupClientFound();
+      mockInterpretarPedido.mockResolvedValue([
+        { producto: "Miel", cantidad: 2 },
+      ]);
+      setupProductosMiel(true, true, 50000);
+      mockRefs.pedidosGet.mockResolvedValue({
+        docs: [],
+        forEach: vi.fn(),
+        empty: true,
+      });
+    }
+
+    function postPedido(app: any) {
+      return request(app)
+        .post("/api/ventas/pedido-libre")
+        .set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
+        .send({ cliente: "Test", mensaje: "2 miel" });
+    }
+
+    it("allows requests up to the configured maximum", async () => {
+      setupHappyPath();
+      const app = createApp();
+
+      const first = await postPedido(app);
+      const second = await postPedido(app);
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(mockRefs.ventasSet).toHaveBeenCalledTimes(2);
+    });
+
+    it("returns 429 once the maximum is exceeded and does not write the order", async () => {
+      setupHappyPath();
+      const app = createApp();
+
+      await postPedido(app);
+      await postPedido(app);
+      const third = await postPedido(app);
+
+      expect(third.status).toBe(429);
+      expect(third.body).toEqual({ error: "too_many_requests" });
+      // Only the two accepted requests wrote an order.
+      expect(mockRefs.ventasSet).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not consume budget for requests rejected by the internal token check", async () => {
+      setupHappyPath();
+      const app = createApp();
+
+      for (let i = 0; i < 3; i++) {
+        const rejected = await request(app)
+          .post("/api/ventas/pedido-libre")
+          .send({ cliente: "Test", mensaje: "2 miel" });
+
+        expect(rejected.status).toBe(403);
+      }
+
+      const accepted = await postPedido(app);
+
+      expect(accepted.status).toBe(200);
+      expect(mockRefs.ventasSet).toHaveBeenCalledTimes(1);
     });
   });
 });
