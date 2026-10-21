@@ -15,6 +15,7 @@ declare module "module" {
 const PROJECT_ROOT = getBackendRoot();
 const FIRESTORE_PATH = path.resolve(PROJECT_ROOT, "src/lib/firestore.js");
 const INTURIS_PATH = path.resolve(PROJECT_ROOT, "src/brain/inturis.js");
+const VENTAS_SERVICE_PATH = path.resolve(PROJECT_ROOT, "src/services/ventas.service.js");
 const VENTAS_REPO_PATH = path.resolve(
   PROJECT_ROOT,
   "src/repositories/ventas.repository.js",
@@ -213,14 +214,19 @@ describe("POST /api/ventas/pedido-libre", () => {
       loaded: true,
     } as any;
 
-    // Clear cached repos and route so they re-require mocked deps
-    [VENTAS_REPO_PATH, PRODUCTOS_REPO_PATH, VENTAS_ROUTE_PATH].forEach((p) => {
+    // Clear cached repos, service and route so they re-require mocked deps
+    [
+      VENTAS_REPO_PATH,
+      PRODUCTOS_REPO_PATH,
+      VENTAS_SERVICE_PATH,
+      VENTAS_ROUTE_PATH,
+    ].forEach((p) => {
       delete Module._cache[p];
     });
   });
 
   afterEach(() => {
-    [FIRESTORE_PATH, INTURIS_PATH].forEach((p) => {
+    [FIRESTORE_PATH, INTURIS_PATH, VENTAS_SERVICE_PATH].forEach((p) => {
       delete Module._cache[p];
     });
     vi.restoreAllMocks();
