@@ -72,3 +72,13 @@ Decision: close T1–T3 with their missing tests **before** starting T4/T5, beca
 - `vi.mock` does **not** intercept the CommonJS `require()` calls inside `backend/src/whatsapp/index.js` (the real `admin.repository` ran and hit Firestore). The repo's established pattern — `Module._cache` injection, as in `backend/tests/integration/ventas.test.ts` and `backend/tests/unit/repositories/admin.repository.test.ts` — is used instead.
 
 **D6 (2026-10-21) — Honest evidence note for T1–T3.** No RED could be observed for T1–T3: the previous session wrote the implementation before freezing, so the new tests pass on the first run. The RED→GREEN discipline applies from T4 onward. What the new tests do prove is that the implementation behaves as S1/S2/S3 specify (missing/invalid/forged signature → 403; non-allowlisted or non-admin sender → 403; missing/incorrect internal token → 403 with no order written).
+
+**D7 (2026-10-21) — Work unit 1 committed.** Commit `2545812` on `feat/backend-robustez`: T1 + T2 + T3 (implementation recovered from the frozen session) + the missing test coverage + this feature doc. Suite: **211/211 green, 22 files** (was 198/198, 21 files). T1–T3 land as one work unit because T1 and T2 live in the same file and splitting them would mean manufacturing intermediate states.
+
+**D8 (2026-10-21) — Pending dependency install for T4.** `express-rate-limit@^8.7.1` is already declared in `backend/package.json` and `package-lock.json` (lockfile entry complete, with integrity hash), but the install was interrupted before `backend/node_modules/express-rate-limit` was materialized. Next session: run `npm install` at the repo root before implementing T4.
+
+**Next step (for the next session):** start directly with **T4** (rate limiting) — no further reconciliation or exploration needed. Design already decided:
+- new middleware `backend/src/middlewares/rateLimit.js`; config in `backend/src/config.js` (`RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` env, window 15 min / max 60 as defaults);
+- webhook limiter keyed by the normalized admin sender number and placed **after** `validateTwilioSignature` + `authorizeAdminSender` (only authenticated traffic consumes the limit; the 403 path is cheap and touches no Firestore, because the allowlist is checked before the admin lookup);
+- pedido-libre limiter keyed by IP, placed **after** the `x-internal-token` check;
+- 429 on exceed, per S4.
