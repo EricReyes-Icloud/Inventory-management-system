@@ -199,6 +199,7 @@ function setupProductosMiel(
 
 describe("POST /api/ventas/pedido-libre", () => {
   beforeEach(() => {
+    process.env.INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || "test-internal-token";
     vi.resetAllMocks();
 
     const built = createMockDb();
@@ -233,6 +234,54 @@ describe("POST /api/ventas/pedido-libre", () => {
   });
 
   // ──────────────────────────────────────────────────────────
+  // S3 — Internal token protection
+  // ──────────────────────────────────────────────────────────
+
+  describe("internal token", () => {
+    it("rejects a request without the internal token", async () => {
+      const app = createApp();
+      const res = await request(app)
+        .post("/api/ventas/pedido-libre")
+        .send({ cliente: "Test", mensaje: "2 miel" });
+
+      expect(res.status).toBe(403);
+      expect(mockRefs.ventasSet).not.toHaveBeenCalled();
+      expect(mockRefs.crearPedidoSet).not.toHaveBeenCalled();
+    });
+
+    it("rejects a request with an invalid internal token", async () => {
+      const app = createApp();
+      const res = await request(app)
+        .post("/api/ventas/pedido-libre")
+        .set("x-internal-token", "not-the-internal-token")
+        .send({ cliente: "Test", mensaje: "2 miel" });
+
+      expect(res.status).toBe(403);
+      expect(mockRefs.ventasSet).not.toHaveBeenCalled();
+      expect(mockRefs.crearPedidoSet).not.toHaveBeenCalled();
+    });
+
+    it("rejects every request when INTERNAL_API_TOKEN is not configured", async () => {
+      const previous = process.env.INTERNAL_API_TOKEN;
+      delete process.env.INTERNAL_API_TOKEN;
+
+      try {
+        const app = createApp();
+        const res = await request(app)
+          .post("/api/ventas/pedido-libre")
+          .set("x-internal-token", "test-internal-token")
+          .send({ cliente: "Test", mensaje: "2 miel" });
+
+        expect(res.status).toBe(403);
+        expect(mockRefs.ventasSet).not.toHaveBeenCalled();
+        expect(mockRefs.crearPedidoSet).not.toHaveBeenCalled();
+      } finally {
+        process.env.INTERNAL_API_TOKEN = previous ?? "test-internal-token";
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────
   // Phase 2, Task 2.1 — Validation scenarios
   // ──────────────────────────────────────────────────────────
 
@@ -240,7 +289,7 @@ describe("POST /api/ventas/pedido-libre", () => {
     it("returns 400 cliente_requerido when cliente is absent", async () => {
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ mensaje: "2 miel" });
 
       expect(res.status).toBe(400);
@@ -250,7 +299,7 @@ describe("POST /api/ventas/pedido-libre", () => {
     it("returns 400 mensaje_requerido when mensaje is absent", async () => {
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test" });
 
       expect(res.status).toBe(400);
@@ -260,7 +309,7 @@ describe("POST /api/ventas/pedido-libre", () => {
     it("returns 400 mensaje_requerido when mensaje is empty string", async () => {
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "" });
 
       expect(res.status).toBe(400);
@@ -279,7 +328,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "NoExiste", mensaje: "2 miel" });
 
       expect(res.status).toBe(404);
@@ -299,7 +348,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "algo que no se entiende" });
 
       expect(res.status).toBe(400);
@@ -324,7 +373,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "2 miel" });
 
       expect(res.status).toBe(400);
@@ -356,7 +405,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "2 miel" });
 
       expect(res.status).toBe(200);

@@ -7,6 +7,12 @@ const { crearPedidoLibre } = require("../services/ventas.service");
  * --------------------------👉 Endpoint para registrar pedido libre-----------------------
  */
 router.post("/pedido-libre", async (req, res) => {
+  const internalToken = req.headers["x-internal-token"];
+  const expectedToken = process.env.INTERNAL_API_TOKEN;
+
+  if (!expectedToken || internalToken !== expectedToken) {
+    return res.status(403).json({ error: "forbidden" });
+  }
   try {
     const { cliente, mensaje } = req.body;
     const result = await crearPedidoLibre({ cliente, mensaje });
