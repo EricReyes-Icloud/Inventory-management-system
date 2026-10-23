@@ -6,12 +6,17 @@ const {
   cerrarCategoria,
 } = require("../services/admin.actions.service");
 
+const { adminAuth } = require("../middlewares/adminAuth");
+
 // ------------------------------------
 // 🔒 POST /admin/cerrar-categoria
 // ------------------------------------
-router.post("/cerrar-categoria", async (req, res) => {
+// adminAuth: token de Firebase + verificación de que el usuario es
+// administrador. Sin esto cualquiera podía cerrar la contabilidad de una
+// categoría.
+router.post("/cerrar-categoria", adminAuth, async (req, res) => {
   try {
-    const { mesAnio, categoria, adminUsuario } = req.body;
+    const { mesAnio, categoria } = req.body;
 
     if (!mesAnio || !categoria) {
       return res.status(400).json({
@@ -23,7 +28,9 @@ router.post("/cerrar-categoria", async (req, res) => {
     const resultado = await cerrarCategoria({
       mesAnio,
       categoria,
-      adminUsuario,
+      // El nombre del administrador sale del token verificado, no del body:
+      // si viniera del body, la auditoría registraría un nombre falsificado.
+      adminUsuario: req.admin?.nombre,
     });
 
     return res.status(200).json({

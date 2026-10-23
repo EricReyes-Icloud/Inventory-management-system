@@ -6,7 +6,7 @@
 // (a non-numeric PORT made net.Server.listen() bind a named pipe instead of
 // failing loudly).
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import Module from "module";
 import path from "path";
 import { getBackendRoot } from "../helpers/paths";
@@ -109,5 +109,140 @@ describe("config.port", () => {
   it("fails fast when PORT in the environment is invalid", () => {
     process.env.PORT = "4a00";
     expect(() => loadConfig()).toThrow(/Invalid PORT/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// resolvePositiveInt — pure function
+// ═══════════════════════════════════════════════════════════
+
+describe("config.resolvePositiveInt", () => {
+  it("falls back to the default when the value is not set", () => {
+    const { resolvePositiveInt } = loadConfig();
+    expect(resolvePositiveInt(undefined, 60, "SOME_VAR")).toBe(60);
+    expect(resolvePositiveInt(null, 60, "SOME_VAR")).toBe(60);
+  });
+
+  it("falls back to the default when the value is empty or blank", () => {
+    const { resolvePositiveInt } = loadConfig();
+    expect(resolvePositiveInt("", 60, "SOME_VAR")).toBe(60);
+    expect(resolvePositiveInt("   ", 60, "SOME_VAR")).toBe(60);
+  });
+
+  it("returns the configured value when it is a positive integer", () => {
+    const { resolvePositiveInt } = loadConfig();
+    expect(resolvePositiveInt("30", 60, "SOME_VAR")).toBe(30);
+    expect(resolvePositiveInt("  30  ", 60, "SOME_VAR")).toBe(30);
+  });
+
+  it("throws when the value is not a plain integer", () => {
+    const { resolvePositiveInt } = loadConfig();
+    expect(() => resolvePositiveInt("abc", 60, "SOME_VAR")).toThrow(/Invalid SOME_VAR/);
+    expect(() => resolvePositiveInt("12.5", 60, "SOME_VAR")).toThrow(/Invalid SOME_VAR/);
+    expect(() => resolvePositiveInt("1e3", 60, "SOME_VAR")).toThrow(/Invalid SOME_VAR/);
+  });
+
+  it("throws when the value is zero or negative", () => {
+    const { resolvePositiveInt } = loadConfig();
+    expect(() => resolvePositiveInt("0", 60, "SOME_VAR")).toThrow(/Invalid SOME_VAR/);
+    expect(() => resolvePositiveInt("-5", 60, "SOME_VAR")).toThrow(/Invalid SOME_VAR/);
+  });
+
+  it("names the offending value and the variable in the error message", () => {
+    const { resolvePositiveInt } = loadConfig();
+    expect(() => resolvePositiveInt("abc", 60, "SOME_VAR")).toThrow(/SOME_VAR/);
+    expect(() => resolvePositiveInt("abc", 60, "SOME_VAR")).toThrow(/abc/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// parseAdminAllowedNumbers — WhatsApp admin allowlist
+// ═══════════════════════════════════════════════════════════
+
+describe("config.parseAdminAllowedNumbers", () => {
+  it("returns an empty list when the value is not set", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers(undefined)).toEqual([]);
+  });
+
+  it("returns an empty list when the value is empty or blank", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers("")).toEqual([]);
+    expect(parseAdminAllowedNumbers("   ")).toEqual([]);
+  });
+
+  it("trims the entries of a comma-separated list", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers(" +573138861417 , +573213413474 ")).toEqual([
+      "+573138861417",
+      "+573213413474",
+    ]);
+  });
+
+  it("drops empty entries between commas", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers("+573138861417,,  ,+573213413474,")).toEqual([
+      "+573138861417",
+      "+573213413474",
+    ]);
+  });
+
+  it("returns a single entry as a one-element list", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers("+573138861417")).toEqual(["+573138861417"]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// rateLimit — window and max for the order-creation paths
+// ═══════════════════════════════════════════════════════════
+
+describe("config.rateLimit", () => {
+  const originalWindow = process.env.RATE_LIMIT_WINDOW_MS;
+  const originalMax = process.env.RATE_LIMIT_MAX;
+
+  afterEach(() => {
+    if (originalWindow === undefined) {
+      delete process.env.RATE_LIMIT_WINDOW_MS;
+    } else {
+      process.env.RATE_LIMIT_WINDOW_MS = originalWindow;
+    }
+    if (originalMax === undefined) {
+      delete process.env.RATE_LIMIT_MAX;
+    } else {
+      process.env.RATE_LIMIT_MAX = originalMax;
+    }
+  });
+
+  it("uses the 15 minute / 60 request defaults when nothing is configured", () => {
+    delete process.env.RATE_LIMIT_WINDOW_MS;
+    delete process.env.RATE_LIMIT_MAX;
+
+    const { rateLimit } = loadConfig();
+
+    expect(rateLimit.windowMs).toBe(900000);
+    expect(rateLimit.max).toBe(60);
+  });
+
+  it("uses the configured window and max when the environment provides them", () => {
+    process.env.RATE_LIMIT_WINDOW_MS = "60000";
+    process.env.RATE_LIMIT_MAX = "5";
+
+    const { rateLimit } = loadConfig();
+
+    expect(rateLimit.windowMs).toBe(60000);
+    expect(rateLimit.max).toBe(5);
+  });
+
+  it("fails fast when RATE_LIMIT_MAX is invalid", () => {
+    process.env.RATE_LIMIT_MAX = "0";
+
+    expect(() => loadConfig()).toThrow(/Invalid RATE_LIMIT_MAX/);
+  });
+
+  it("fails fast when RATE_LIMIT_WINDOW_MS is invalid", () => {
+    process.env.RATE_LIMIT_WINDOW_MS = "abc";
+
+    expect(() => loadConfig()).toThrow(/Invalid RATE_LIMIT_WINDOW_MS/);
   });
 });

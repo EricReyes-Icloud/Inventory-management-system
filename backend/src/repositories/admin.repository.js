@@ -8,6 +8,19 @@ const db = require("../lib/firestore");
 // ADMIN (Firebase Auth)
 // ═══════════════════════════════════════════
 
+function normalizarTelefono(telefono) {
+  if (!telefono) return "";
+  let t = String(telefono).replace(/whatsapp:/i, "").trim();
+  t = t.replace(/[\s\-\(\)]/g, "");
+  if (t.startsWith("00")) t = "+" + t.slice(2);
+  if (!t.startsWith("+")) {
+    if (t.startsWith("57") && t.length === 12) t = "+" + t;
+    else if (t.length === 10) t = "+57" + t;
+    else t = "+" + t;
+  }
+  return t;
+}
+
 /**
  * Obtiene un admin por email con filtros de estado y rol.
  * @param {string} email
@@ -37,6 +50,51 @@ async function getAdminByRol(rol) {
     .collection("Admin")
     .where("Rol", "==", rol)
     .get();
+}
+
+/**
+ * Busca un admin por teléfono en Admin, Admin_2, Admin_3
+ */
+async function getAdminByTelefono(telefono) {
+  const clean = normalizarTelefono(telefono);
+  if (!clean) return { empty: true, docs: [], clean };
+
+  const collections = ["Admin", "Admin_2", "Admin_3"];
+  for (const col of collections) {
+    try {
+      const snap = await db
+        .collection("Usuarios")
+        .doc("Usuarios")
+        .collection(col)
+        .where("Telefono", "==", clean)
+        .limit(1)
+        .get();
+      if (!snap.empty) return snap;
+    } catch (err) {
+      console.error(`Error buscando admin por telefono en ${col}:`, err.message);
+    }
+  }
+  // Intento con variantes sin + por si hay datos diferentes
+  try {
+    const sinMas = clean.replace("+", "");
+    if (sinMas && sinMas !== clean) {
+      for (const col of collections) {
+        try {
+          const snap = await db
+            .collection("Usuarios")
+            .doc("Usuarios")
+            .collection(col)
+            .where("Telefono", "==", sinMas)
+            .limit(1)
+            .get();
+          if (!snap.empty) return snap;
+        } catch (err) {
+          console.error(`Error buscando admin por telefono sin + en ${col}:`, err.message);
+        }
+      }
+    }
+  } catch (_) {}
+  return { empty: true, docs: [], clean };
 }
 
 // ═══════════════════════════════════════════
@@ -105,6 +163,8 @@ module.exports = {
   // Admin
   getAdminByEmail,
   getAdminByRol,
+  getAdminByTelefono,
+  normalizarTelefono,
 
   // Invertir
   getInversion,

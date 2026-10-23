@@ -25,6 +25,7 @@ const PRODUCTOS_REPO_PATH = path.resolve(
   "src/repositories/productos.repository.js",
 );
 const VENTAS_ROUTE_PATH = path.resolve(PROJECT_ROOT, "src/routes/ventas.js");
+const CONFIG_PATH = path.resolve(PROJECT_ROOT, "src/config.js");
 
 // ── Shared mock state ──
 let mockDb: any;
@@ -199,6 +200,7 @@ function setupProductosMiel(
 
 describe("POST /api/ventas/pedido-libre", () => {
   beforeEach(() => {
+    process.env.INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || "test-internal-token";
     vi.resetAllMocks();
 
     const built = createMockDb();
@@ -233,6 +235,54 @@ describe("POST /api/ventas/pedido-libre", () => {
   });
 
   // ──────────────────────────────────────────────────────────
+  // S3 — Internal token protection
+  // ──────────────────────────────────────────────────────────
+
+  describe("internal token", () => {
+    it("rejects a request without the internal token", async () => {
+      const app = createApp();
+      const res = await request(app)
+        .post("/api/ventas/pedido-libre")
+        .send({ cliente: "Test", mensaje: "2 miel" });
+
+      expect(res.status).toBe(403);
+      expect(mockRefs.ventasSet).not.toHaveBeenCalled();
+      expect(mockRefs.crearPedidoSet).not.toHaveBeenCalled();
+    });
+
+    it("rejects a request with an invalid internal token", async () => {
+      const app = createApp();
+      const res = await request(app)
+        .post("/api/ventas/pedido-libre")
+        .set("x-internal-token", "not-the-internal-token")
+        .send({ cliente: "Test", mensaje: "2 miel" });
+
+      expect(res.status).toBe(403);
+      expect(mockRefs.ventasSet).not.toHaveBeenCalled();
+      expect(mockRefs.crearPedidoSet).not.toHaveBeenCalled();
+    });
+
+    it("rejects every request when INTERNAL_API_TOKEN is not configured", async () => {
+      const previous = process.env.INTERNAL_API_TOKEN;
+      delete process.env.INTERNAL_API_TOKEN;
+
+      try {
+        const app = createApp();
+        const res = await request(app)
+          .post("/api/ventas/pedido-libre")
+          .set("x-internal-token", "test-internal-token")
+          .send({ cliente: "Test", mensaje: "2 miel" });
+
+        expect(res.status).toBe(403);
+        expect(mockRefs.ventasSet).not.toHaveBeenCalled();
+        expect(mockRefs.crearPedidoSet).not.toHaveBeenCalled();
+      } finally {
+        process.env.INTERNAL_API_TOKEN = previous ?? "test-internal-token";
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────
   // Phase 2, Task 2.1 — Validation scenarios
   // ──────────────────────────────────────────────────────────
 
@@ -240,7 +290,7 @@ describe("POST /api/ventas/pedido-libre", () => {
     it("returns 400 cliente_requerido when cliente is absent", async () => {
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ mensaje: "2 miel" });
 
       expect(res.status).toBe(400);
@@ -250,7 +300,7 @@ describe("POST /api/ventas/pedido-libre", () => {
     it("returns 400 mensaje_requerido when mensaje is absent", async () => {
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test" });
 
       expect(res.status).toBe(400);
@@ -260,7 +310,7 @@ describe("POST /api/ventas/pedido-libre", () => {
     it("returns 400 mensaje_requerido when mensaje is empty string", async () => {
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "" });
 
       expect(res.status).toBe(400);
@@ -279,7 +329,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "NoExiste", mensaje: "2 miel" });
 
       expect(res.status).toBe(404);
@@ -299,7 +349,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "algo que no se entiende" });
 
       expect(res.status).toBe(400);
@@ -324,7 +374,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "2 miel" });
 
       expect(res.status).toBe(400);
@@ -356,7 +406,7 @@ describe("POST /api/ventas/pedido-libre", () => {
 
       const app = createApp();
       const res = await request(app)
-        .post("/api/ventas/pedido-libre")
+        .post("/api/ventas/pedido-libre").set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
         .send({ cliente: "Test", mensaje: "2 miel" });
 
       expect(res.status).toBe(200);
@@ -376,6 +426,101 @@ describe("POST /api/ventas/pedido-libre", () => {
       expect(mockRefs.pedidoMesSet).toHaveBeenCalled();
       expect(mockRefs.pedidosGet).toHaveBeenCalled();
       expect(mockRefs.crearPedidoSet).toHaveBeenCalled();
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────
+  // S4 — Rate limiting
+  // ──────────────────────────────────────────────────────────
+
+  describe("rate limit", () => {
+    const originalWindow = process.env.RATE_LIMIT_WINDOW_MS;
+    const originalMax = process.env.RATE_LIMIT_MAX;
+
+    beforeEach(() => {
+      process.env.RATE_LIMIT_WINDOW_MS = "900000";
+      process.env.RATE_LIMIT_MAX = "2";
+      // Reload the config module so the limiter picks up the env above.
+      delete Module._cache[CONFIG_PATH];
+    });
+
+    afterEach(() => {
+      if (originalWindow === undefined) {
+        delete process.env.RATE_LIMIT_WINDOW_MS;
+      } else {
+        process.env.RATE_LIMIT_WINDOW_MS = originalWindow;
+      }
+      if (originalMax === undefined) {
+        delete process.env.RATE_LIMIT_MAX;
+      } else {
+        process.env.RATE_LIMIT_MAX = originalMax;
+      }
+      delete Module._cache[CONFIG_PATH];
+    });
+
+    /** Registers a happy-path pedido so an accepted request writes an order. */
+    function setupHappyPath() {
+      setupClientFound();
+      mockInterpretarPedido.mockResolvedValue([
+        { producto: "Miel", cantidad: 2 },
+      ]);
+      setupProductosMiel(true, true, 50000);
+      mockRefs.pedidosGet.mockResolvedValue({
+        docs: [],
+        forEach: vi.fn(),
+        empty: true,
+      });
+    }
+
+    function postPedido(app: any) {
+      return request(app)
+        .post("/api/ventas/pedido-libre")
+        .set("x-internal-token", process.env.INTERNAL_API_TOKEN || "test-internal-token")
+        .send({ cliente: "Test", mensaje: "2 miel" });
+    }
+
+    it("allows requests up to the configured maximum", async () => {
+      setupHappyPath();
+      const app = createApp();
+
+      const first = await postPedido(app);
+      const second = await postPedido(app);
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(mockRefs.ventasSet).toHaveBeenCalledTimes(2);
+    });
+
+    it("returns 429 once the maximum is exceeded and does not write the order", async () => {
+      setupHappyPath();
+      const app = createApp();
+
+      await postPedido(app);
+      await postPedido(app);
+      const third = await postPedido(app);
+
+      expect(third.status).toBe(429);
+      expect(third.body).toEqual({ error: "too_many_requests" });
+      // Only the two accepted requests wrote an order.
+      expect(mockRefs.ventasSet).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not consume budget for requests rejected by the internal token check", async () => {
+      setupHappyPath();
+      const app = createApp();
+
+      for (let i = 0; i < 3; i++) {
+        const rejected = await request(app)
+          .post("/api/ventas/pedido-libre")
+          .send({ cliente: "Test", mensaje: "2 miel" });
+
+        expect(rejected.status).toBe(403);
+      }
+
+      const accepted = await postPedido(app);
+
+      expect(accepted.status).toBe(200);
+      expect(mockRefs.ventasSet).toHaveBeenCalledTimes(1);
     });
   });
 });

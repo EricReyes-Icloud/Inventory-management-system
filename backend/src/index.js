@@ -4,9 +4,8 @@
 const dotenv = require("dotenv");
 dotenv.config(); //Carga las variables en process.env
 
-// Importamos librerias express y cors
+// Importamos libreria express
 const express = require("express"); //Framework para crear el API
-const cors = require("cors"); //cors permite conexiones externas
 
 
 // Importamos nuestras rutas
@@ -24,10 +23,32 @@ const adminContabilidadRoutes = require("./routes/admin.contabilidad.routes.js")
 
 // Creamos el servidor y permitimos que entienda json en el body
 const app = express();
+
+// El backend se despliega detrás de un proxy (Render/Railway). Sin esto,
+// req.ip es la IP del proxy y el rate limiting por IP se convierte en un
+// único bucket global para todo el sistema.
+app.set("trust proxy", 1);
+
 app.use(express.json());
 
-// Cors - permitimos que otros dominios consuman nuestra API
-app.use(cors({ origin: true }));
+// Cors - allowlist de origenes (S5). Sin CORS_ALLOWED_ORIGINS configurado
+// ningun origen de navegador pasa (403); el trafico servidor a servidor
+// (Twilio, curl, cron) no manda la cabecera Origin y sigue entrando.
+const { createCorsHeaders, createCorsGuard } = require("./middlewares/cors");
+const { cors: corsConfig } = require("./config");
+
+if (corsConfig.allowedOrigins.length === 0) {
+  console.warn(
+    "[cors] CORS_ALLOWED_ORIGINS no esta definido: todos los origenes de navegador van a ser rechazados con 403. Define los origenes del frontend separados por comas."
+  );
+} else if (corsConfig.allowedOrigins.includes("*")) {
+  console.warn(
+    "[cors] CORS_ALLOWED_ORIGINS contiene '*': se permite cualquier origen. Reservado para desarrollo."
+  );
+}
+
+app.use(createCorsHeaders());
+app.use(createCorsGuard());
 
 
 // Modularidad - separamos responsabilidad por modulos: mejor legibilidad, escalabilidad y testing

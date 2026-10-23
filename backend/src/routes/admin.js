@@ -26,7 +26,10 @@ function requireAdminToken(req, res, next) {
   next();
 }
 
-router.post("/job-contable", async (req, res) => {
+// 🔐 POST /job-contable — guarded by the admin token
+// This endpoint triggers the monthly accounting job, so it is protected with
+// the same ADMIN_TOKEN as the other admin route in this file.
+router.post("/job-contable", requireAdminToken, async (req, res) => {
   try {
     await jobContableMensual();
     res.json({ ok: true, mensaje: "Job contable ejecutado correctamente" });
