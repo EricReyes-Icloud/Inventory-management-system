@@ -85,6 +85,7 @@ describe("POST /api/whatsapp/webhook — rate limiting (S4)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     process.env.TWILIO_AUTH_TOKEN = AUTH_TOKEN;
+    process.env.ADMIN_ALLOWED_NUMBERS = [ADMIN_ERIC, ADMIN_JULY].join(",");
     process.env.RATE_LIMIT_MAX = RATE_LIMIT_MAX;
     process.env.RATE_LIMIT_WINDOW_MS = RATE_LIMIT_WINDOW_MS;
 
@@ -112,6 +113,7 @@ describe("POST /api/whatsapp/webhook — rate limiting (S4)", () => {
 
   afterEach(() => {
     delete process.env.TWILIO_AUTH_TOKEN;
+    delete process.env.ADMIN_ALLOWED_NUMBERS;
     delete process.env.RATE_LIMIT_MAX;
     delete process.env.RATE_LIMIT_WINDOW_MS;
     delete Module._cache[CONFIG_PATH];

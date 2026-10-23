@@ -3,6 +3,7 @@ const bodyParser = require("body-parser"); //Para leer el body de la request
 const twilio = require("twilio"); //SDK de Twilio
 const { procesarMensajeTwilio } = require("../brain/inturis.js");
 const adminRepo = require("../repositories/admin.repository");
+const { admin: adminConfig } = require("../config");
 const { createWebhookRateLimiter } = require("../middlewares/rateLimit");
 
 const router = express.Router(); // Mini-servidor modular
@@ -11,12 +12,6 @@ router.use(bodyParser.urlencoded({ extended: false })); // Permite el formato de
 // El limitador va DESPUÉS de la validación de firma y de la autorización del
 // remitente: solo el tráfico autenticado consume presupuesto.
 const webhookRateLimiter = createWebhookRateLimiter();
-
-const ALLOWED_ADMIN_NUMBERS = [
-  "+573138861417",
-  "+573213413474",
-  "+573203648967",
-];
 
 function normalizeNumber(telefono) {
   if (!telefono) return "";
@@ -29,6 +24,18 @@ function normalizeNumber(telefono) {
     else t = "+" + t;
   }
   return t;
+}
+
+// Allowlist de remitentes, resuelta desde ADMIN_ALLOWED_NUMBERS al cargar el
+// módulo. Se normaliza acá porque la config guarda los números tal cual.
+const ALLOWED_ADMIN_NUMBERS = adminConfig.allowedNumbers
+  .map(normalizeNumber)
+  .filter((n) => n !== "");
+
+if (ALLOWED_ADMIN_NUMBERS.length === 0) {
+  console.warn(
+    "[whatsapp] ADMIN_ALLOWED_NUMBERS no esta definido: todos los remitentes van a ser rechazados con 403."
+  );
 }
 
 function validateTwilioSignature(req, res, next) {

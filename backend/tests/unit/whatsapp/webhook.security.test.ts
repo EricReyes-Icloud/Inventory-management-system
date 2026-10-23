@@ -14,6 +14,7 @@ declare module "module" {
 
 // ── Module paths (same injection pattern as routes/ventas.test.ts) ──────
 const PROJECT_ROOT = getBackendRoot();
+const CONFIG_PATH = path.resolve(PROJECT_ROOT, "src/config.js");
 const ADMIN_REPO_PATH = path.resolve(PROJECT_ROOT, "src/repositories/admin.repository.js");
 const INTURIS_PATH = path.resolve(PROJECT_ROOT, "src/brain/inturis.js");
 const WHATSAPP_PATH = path.resolve(PROJECT_ROOT, "src/whatsapp/index.js");
@@ -83,6 +84,9 @@ describe("POST /api/whatsapp/webhook — security", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     process.env.TWILIO_AUTH_TOKEN = AUTH_TOKEN;
+    // The allowlist is read from config at router load time, so it must be
+    // set before the router is required.
+    process.env.ADMIN_ALLOWED_NUMBERS = [ADMIN_ERIC, ADMIN_JULY, ADMIN_EDWIN].join(",");
 
     getAdminByTelefonoMock.mockResolvedValue(adminSnapshot());
     procesarMensajeTwilioMock.mockResolvedValue({ pedidoRegistrado: true });
@@ -100,12 +104,16 @@ describe("POST /api/whatsapp/webhook — security", () => {
       },
     } as any;
 
-    // Fresh router instance so it picks up the injected modules.
+    // Fresh config (new ADMIN_ALLOWED_NUMBERS) and a fresh router instance so
+    // it picks up the injected modules.
+    delete Module._cache[CONFIG_PATH];
     delete Module._cache[WHATSAPP_PATH];
   });
 
   afterEach(() => {
     delete process.env.TWILIO_AUTH_TOKEN;
+    delete process.env.ADMIN_ALLOWED_NUMBERS;
+    delete Module._cache[CONFIG_PATH];
     delete Module._cache[ADMIN_REPO_PATH];
     delete Module._cache[INTURIS_PATH];
     delete Module._cache[WHATSAPP_PATH];
@@ -167,6 +175,30 @@ describe("POST /api/whatsapp/webhook — security", () => {
 
       expect(res.status).toBe(403);
       expect(getAdminByTelefonoMock).not.toHaveBeenCalled();
+      expect(procesarMensajeTwilioMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects a sender that exists as admin in Firestore but is not in ADMIN_ALLOWED_NUMBERS", async () => {
+      // The repo mock still returns an admin document: the env allowlist gate
+      // must run first and reject the sender before Firestore is consulted.
+      const body = { From: NOT_ALLOWED, Body: "2 miel" };
+
+      const res = await post(body, signParams(body));
+
+      expect(res.status).toBe(403);
+      expect(getAdminByTelefonoMock).not.toHaveBeenCalled();
+      expect(procesarMensajeTwilioMock).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when ADMIN_ALLOWED_NUMBERS is not configured", async () => {
+      delete process.env.ADMIN_ALLOWED_NUMBERS;
+      delete Module._cache[CONFIG_PATH];
+      delete Module._cache[WHATSAPP_PATH];
+
+      const body = { From: ADMIN_ERIC, Body: "2 miel" };
+      const res = await post(body, signParams(body));
+
+      expect(res.status).toBe(403);
       expect(procesarMensajeTwilioMock).not.toHaveBeenCalled();
     });
 

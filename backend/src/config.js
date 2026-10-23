@@ -147,6 +147,29 @@ function parseAllowedOrigins(raw) {
     .filter((origin) => origin !== "");
 }
 
+/**
+ * Parsea la lista de números de administradores autorizados de WhatsApp.
+ *
+ * Acepta: undefined, null o string vacío → lista vacía (fail closed).
+ * Acepta: lista separada por comas; cada entrada se recorta y las entradas
+ * vacías se descartan. No valida el formato del teléfono: la normalización a
+ * E.164 es responsabilidad del módulo de WhatsApp.
+ *
+ * @param {string|undefined|null} raw
+ * @returns {string[]} lista de números tal como vienen configurados
+ */
+function parseAdminAllowedNumbers(raw) {
+  if (raw === undefined || raw === null) return [];
+
+  const value = String(raw).trim();
+  if (value === "") return [];
+
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+}
+
 // Rate limiting de los endpoints de creación de pedidos, resuelto una vez por
 // proceso igual que el puerto.
 const rateLimit = {
@@ -171,6 +194,16 @@ const cors = {
   allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
 };
 
+// Números autorizados a crear pedidos por WhatsApp (S2), resueltos una vez
+// por proceso.
+//
+// Fail closed: sin ADMIN_ALLOWED_NUMBERS la lista queda vacía y el webhook
+// rechaza con 403 a TODOS los remitentes. La lista de Firestore sigue siendo
+// la segunda verificación (el número además tiene que existir como admin).
+const admin = {
+  allowedNumbers: parseAdminAllowedNumbers(process.env.ADMIN_ALLOWED_NUMBERS),
+};
+
 module.exports = {
   port,
   resolvePort,
@@ -183,4 +216,6 @@ module.exports = {
   cors,
   parseAllowedOrigins,
   normalizeOrigin,
+  admin,
+  parseAdminAllowedNumbers,
 };

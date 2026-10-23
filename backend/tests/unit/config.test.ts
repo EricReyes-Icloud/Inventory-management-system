@@ -156,6 +156,44 @@ describe("config.resolvePositiveInt", () => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// parseAdminAllowedNumbers — WhatsApp admin allowlist
+// ═══════════════════════════════════════════════════════════
+
+describe("config.parseAdminAllowedNumbers", () => {
+  it("returns an empty list when the value is not set", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers(undefined)).toEqual([]);
+  });
+
+  it("returns an empty list when the value is empty or blank", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers("")).toEqual([]);
+    expect(parseAdminAllowedNumbers("   ")).toEqual([]);
+  });
+
+  it("trims the entries of a comma-separated list", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers(" +573138861417 , +573213413474 ")).toEqual([
+      "+573138861417",
+      "+573213413474",
+    ]);
+  });
+
+  it("drops empty entries between commas", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers("+573138861417,,  ,+573213413474,")).toEqual([
+      "+573138861417",
+      "+573213413474",
+    ]);
+  });
+
+  it("returns a single entry as a one-element list", () => {
+    const { parseAdminAllowedNumbers } = loadConfig();
+    expect(parseAdminAllowedNumbers("+573138861417")).toEqual(["+573138861417"]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
 // rateLimit — window and max for the order-creation paths
 // ═══════════════════════════════════════════════════════════
 
