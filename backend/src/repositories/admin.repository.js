@@ -94,6 +94,28 @@ async function getAdminByTelefono(telefono) {
       }
     }
   } catch (_) {}
+
+  // Intento con formato Firestore: +57 <espacio> número (como se guarda en BD)
+  // clean viene como +573138861417, necesitamos +57 3138861417
+  try {
+    if (clean.startsWith("+57") && clean.length === 13) {
+      const formatoFirestore = "+57 " + clean.slice(3);
+      for (const col of collections) {
+        try {
+          const snap = await db
+            .collection("Usuarios")
+            .doc("Usuarios")
+            .collection(col)
+            .where("Telefono", "==", formatoFirestore)
+            .limit(1)
+            .get();
+          if (!snap.empty) return snap;
+        } catch (err) {
+          console.error(`Error buscando admin por telefono formato Firestore en ${col}:`, err.message);
+        }
+      }
+    }
+  } catch (_) {}
   return { empty: true, docs: [], clean };
 }
 
