@@ -125,6 +125,7 @@ const SNAPSHOT_CATEGORIES = {
 function dryRun() {
   return Object.entries(SNAPSHOT_SYNONYMS).map(([product, sinonimos]) => ({
     product,
+    nombreCanonico: product,
     sinonimos,
     categoria: SNAPSHOT_CATEGORIES[product] || null,
   }));
@@ -177,7 +178,7 @@ async function seedCatalog(db, entries) {
 
     plan.push({
       ref: subcolSnap.docs[0].ref,
-      data: { sinonimos, categoria },
+      data: { nombreCanonico: product, sinonimos, categoria },
     });
   }
 
