@@ -37,14 +37,14 @@ Check: CI run.
 
 | ID | S# | Route | Task | Status | Evidence |
 |----|----|-------|------|--------|----------|
-| T1 | S1 | inline | Add `getTodosPedidosPendientesGlobal()` to `ventas.repository.js` with collectionGroup query | ⏳ | — |
-| T2 | S1 | inline | Add unit test for `getTodosPedidosPendientesGlobal()` mocking Firestore collectionGroup | ⏳ | — |
-| T3 | S2 | inline | Refactor `processPendingOrders()` to use global query + group by clienteId|mesAnio | ⏳ | — |
-| T4 | S2 | inline | Update job unit tests to mock new repository method and verify grouping | ⏳ | — |
-| T5 | S3 | inline | Add/update `firestore.indexes.json` with collectionGroup index for pedidos | ⏳ | — |
-| T6 | S4 | inline | Verify idempotency guards and batch logic unchanged via existing tests | ⏳ | — |
-| T7 | S5 | inline | Run full suite `npm run test:ci` — expect 273+ tests green | ⏳ | — |
-| T8 | all | inline | Work-unit commit on `feat/backend-robustez` | ⏳ | — |
+| T1 | S1 | inline | Add `getTodosPedidosPendientesGlobal()` to `ventas.repository.js` with collectionGroup query | ✅ | — |
+| T2 | S1 | inline | Add unit test for `getTodosPedidosPendientesGlobal()` mocking Firestore collectionGroup | ✅ | `backend/tests/unit/repositories/ventas.repository.test.ts` — 2 tests |
+| T3 | S2 | inline | Refactor `processPendingOrders()` to use global query + group by clienteId|mesAnio | ✅ | — |
+| T4 | S2 | inline | Update job unit tests to mock new repository method and verify grouping | ✅ | `backend/tests/unit/job/jobContable.rules.test.ts` — 11 tests updated |
+| T5 | S3 | inline | Add/update `firestore.indexes.json` with collectionGroup index for pedidos | ✅ | `firestore.indexes.json` created |
+| T6 | S4 | inline | Verify idempotency guards and batch logic unchanged via existing tests | ✅ | All 11 job rules tests pass |
+| T7 | S5 | inline | Run full suite `npm run test:ci` — expect 273+ tests green | ✅ | 274/274 tests pass |
+| T8 | all | inline | Work-unit commit on `feat/backend-robustez` | ✅ | `c9b1695` |
 
 ## Log
 
@@ -59,3 +59,5 @@ Check: CI run.
 **D4 — Backward compatibility (2026-10-29).** Old methods `getTodosClientesConVentas`, `getMesesPedidos`, `getPedidosPendientes` remain in repository for other consumers (APIs, admin UI). Only the job switches to global query.
 
 **Risk: item 6 (read path optimization, no test catches wrong query structure) — mitigated by unit test asserting query shape + integration test with mock Firestore.**
+
+**CLOSE — 2026-10-29.** All 8 tasks complete. Feature closed on `feat/backend-robustez` with commit `c9b1695`. Suite 274/274 green. Performance: job reads reduced from O(N×M) to O(1) — from ~1,200 reads (100 clients × 12 months) to 1 collectionGroup query. Old repository methods preserved for other consumers.
