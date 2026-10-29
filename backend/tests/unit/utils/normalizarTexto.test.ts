@@ -1,38 +1,40 @@
 import { describe, it, expect } from "vitest";
-const { normalizarTexto } = require("../../../src/utils/normalizarTexto"); // ajusta ruta
+const { normalizarTexto } = require("../../../src/utils/normalizarTexto");
 
-describe("normalizarTexto", () => {
+describe("normalizarTexto — normalización Unicode pura (sin reglas de negocio)", () => {
 
   // 1. Normalización básica
   describe("normalización básica", () => {
     it("debe convertir a minúsculas y quitar tildes", () => {
       expect(normalizarTexto("AJÍ")).toBe("aji");
       expect(normalizarTexto("Café")).toBe("cafe");
+      expect(normalizarTexto("PERÚ")).toBe("peru");
     });
   });
 
-  // 2. Eliminación de símbolos
+  // 2. Eliminación de símbolos y caracteres no alfanuméricos
   describe("eliminación de símbolos", () => {
     it("debe eliminar caracteres especiales", () => {
       expect(normalizarTexto("clavo #100!")).toBe("clavo 100");
       expect(normalizarTexto("aji (50)")).toBe("aji 50");
+      expect(normalizarTexto("!!!***")).toBe("");
     });
   });
 
-  // 3. Singularización
-  describe("singularización", () => {
-    it("debe convertir plurales a singular", () => {
-      expect(normalizarTexto("clavos")).toBe("clavo");
-      expect(normalizarTexto("ajies")).toBe("aji");
-      expect(normalizarTexto("mieles")).toBe("miel");
+  // 3. NO singularización — el normalizador es puro, sin reglas de plural
+  describe("sin reglas de plural (stricta normalización Unicode)", () => {
+    it("NO convierte plurales a singular — eso es regla de negocio en inturis", () => {
+      expect(normalizarTexto("clavos")).toBe("clavos");
+      expect(normalizarTexto("ajies")).toBe("ajies");
+      expect(normalizarTexto("mieles")).toBe("mieles");
     });
   });
 
-  // 4. Regla "de" → "*"
-  describe("regla de → *", () => {
-    it("debe transformar 'de' en '*'", () => {
-      expect(normalizarTexto("clavo de 100")).toBe("clavo * 100");
-      expect(normalizarTexto("miel de 50")).toBe("miel * 50");
+  // 4. NO regla "de" → "*" — eso es regla de negocio en inturis
+  describe("sin regla de → *", () => {
+    it("NO transforma 'de' en '*' — eso es regla de negocio en inturis", () => {
+      expect(normalizarTexto("clavo de 100")).toBe("clavo de 100");
+      expect(normalizarTexto("miel de 50")).toBe("miel de 50");
     });
   });
 
@@ -40,46 +42,30 @@ describe("normalizarTexto", () => {
   describe("espacios", () => {
     it("debe limpiar espacios extra", () => {
       expect(normalizarTexto("   clavo    100   ")).toBe("clavo 100");
-      expect(normalizarTexto("aji    de   50")).toBe("aji * 50");
+      expect(normalizarTexto("aji    de   50")).toBe("aji de 50");
     });
   });
 
-  // 6. Casos reales (negocio)
-  describe("casos reales de negocio", () => {
-    it("debe normalizar pedidos reales correctamente", () => {
-      expect(normalizarTexto("10 canela pequeña")).toBe("10 canela pequeña");
-      expect(normalizarTexto("clavos de 100")).toBe("clavo * 100");
-      expect(normalizarTexto("mieles de 50")).toBe("miel * 50");
-      expect(normalizarTexto("   AJIES   DE 50!!!")).toBe("aji * 50");
-      expect(normalizarTexto("Canela molida de 50")).toBe("canela molida * 50");
-    });
-  });
-
-  // 7. Edge cases
-  describe("edge cases", () => {
-    it("debe manejar valores vacíos o raros", () => {
-      expect(normalizarTexto("")).toBe("");
-      expect(normalizarTexto("!!!***")).toBe("");
+  // 6. Números y alfanuméricos
+  describe("números", () => {
+    it("debe preservar números", () => {
       expect(normalizarTexto("1234")).toBe("1234");
-      expect(normalizarTexto("perro de 50")).toBe("perro * 50");
+      expect(normalizarTexto("10 canela")).toBe("10 canela");
     });
   });
 
-  // 8. Preservación de la ñ (deuda técnica #2026-10-26)
-  // La ñ es una LETRA del alfabeto español, no una "n con tilde".
-  // NFD la descompone en n + tilde combinable y el replace borra la tilde,
-  // deformando nombres reales (canela pequeña → canela pequena).
+  // 7. Preservación de la ñ (deuda técnica #2026-10-26)
   describe("ñ preservada", () => {
-    it("debe conservar la ñ minúscola", () => {
+    it("debe conservar la ñ minúscula", () => {
       expect(normalizarTexto("caña")).toBe("caña");
       expect(normalizarTexto("jalapeño")).toBe("jalapeño");
       expect(normalizarTexto("piñata")).toBe("piñata");
       expect(normalizarTexto("años")).toBe("años");
       expect(normalizarTexto("niña")).toBe("niña");
-      expect(normalizarTexto("10 canela pequeña")).toBe("10 canela pequeña");
+      expect(normalizarTexto("canela pequeña")).toBe("canela pequeña");
     });
 
-    it("debe conservar la ñ mayúscola (Ñ) y convertirla a minúscola", () => {
+    it("debe conservar la ñ mayúscula (Ñ) y convertirla a minúscula", () => {
       expect(normalizarTexto("Ñandú")).toBe("ñandu");
       expect(normalizarTexto("AÑO")).toBe("año");
       expect(normalizarTexto("ÑAPA")).toBe("ñapa");
@@ -95,11 +81,6 @@ describe("normalizarTexto", () => {
       expect(normalizarTexto("AJí")).toBe("aji");
       expect(normalizarTexto("Café")).toBe("cafe");
       expect(normalizarTexto("perú")).toBe("peru");
-    });
-
-    it("debe preservar la ñ en combinación con las otras reglas", () => {
-      expect(normalizarTexto("clavos de ñandú")).toBe("clavo * ñandu");
-      expect(normalizarTexto("   JALAPEÑOS   DE 50!!!")).toBe("jalapeños * 50");
     });
   });
 });

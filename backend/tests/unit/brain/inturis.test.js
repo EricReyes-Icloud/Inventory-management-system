@@ -306,4 +306,61 @@ describe("interpretarPedido", () => {
       ]);
     });
   });
+
+  // ── Reglas de negocio: plurales y "de" → "*" (aplicadas ANTES de normalizar) ────────
+  describe("aplicarReglasNegocio — reglas de plural y 'de' → '*'", () => {
+    it("convierte 'clavos' → 'clavo'", () => {
+      const { aplicarReglasNegocio } = loadInturis();
+      expect(aplicarReglasNegocio("clavos")).toBe("clavo");
+      expect(aplicarReglasNegocio("clavos de 100")).toBe("clavo * 100");
+    });
+
+    it("convierte 'ajies' → 'aji'", () => {
+      const { aplicarReglasNegocio } = loadInturis();
+      expect(aplicarReglasNegocio("ajies")).toBe("aji");
+      expect(aplicarReglasNegocio("ajies grandes")).toBe("aji grandes");
+    });
+
+    it("convierte 'mieles' → 'miel'", () => {
+      const { aplicarReglasNegocio } = loadInturis();
+      expect(aplicarReglasNegocio("mieles")).toBe("miel");
+      expect(aplicarReglasNegocio("mieles de 50")).toBe("miel * 50");
+    });
+
+    it("convierte 'de' → '*'", () => {
+      const { aplicarReglasNegocio } = loadInturis();
+      expect(aplicarReglasNegocio("clavo de 100")).toBe("clavo * 100");
+      expect(aplicarReglasNegocio("miel de 50")).toBe("miel * 50");
+      expect(aplicarReglasNegocio("botella de miel")).toBe("botella * miel");
+    });
+
+    it("aplica múltiples reglas en cadena", () => {
+      const { aplicarReglasNegocio } = loadInturis();
+      expect(aplicarReglasNegocio("clavos de miel")).toBe("clavo * miel");
+      expect(aplicarReglasNegocio("ajies de canela")).toBe("aji * canela");
+    });
+  });
+
+  // ── reemplazarNumerosPalabras ──────────────────────────────────
+  describe("reemplazarNumerosPalabras — números en palabras a dígitos", () => {
+    it("'un' → 1", () => {
+      const { reemplazarNumerosPalabras } = loadInturis();
+      expect(reemplazarNumerosPalabras("un clavo")).toBe("1 clavo");
+      expect(reemplazarNumerosPalabras("una frasco")).toBe("1 frasco");
+      expect(reemplazarNumerosPalabras("uno aji")).toBe("1 aji");
+    });
+
+    it("'dos' → 2, 'tres' → 3, etc.", () => {
+      const { reemplazarNumerosPalabras } = loadInturis();
+      expect(reemplazarNumerosPalabras("dos clavos")).toBe("2 clavos");
+      expect(reemplazarNumerosPalabras("tres miel")).toBe("3 miel");
+      expect(reemplazarNumerosPalabras("diez aji")).toBe("10 aji");
+    });
+
+    it("no afecta palabras que no son números", () => {
+      const { reemplazarNumerosPalabras } = loadInturis();
+      expect(reemplazarNumerosPalabras("clavo grande")).toBe("clavo grande");
+      expect(reemplazarNumerosPalabras("canela pequena")).toBe("canela pequena");
+    });
+  });
 });

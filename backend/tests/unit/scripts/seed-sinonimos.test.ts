@@ -225,7 +225,7 @@ describe("seedCatalog write path", () => {
     }
   });
 
-  it("writes the snapshot sinonimos and categoria for each product", async () => {
+  it("writes the snapshot nombreCanonico, sinonimos and categoria for each product", async () => {
     const { mockDb, refs } = scenarioWith(buildProductosStore(products));
 
     await script.seedCatalog(mockDb, script.dryRun());
@@ -235,6 +235,7 @@ describe("seedCatalog write path", () => {
     );
     const ajiPath = `${PRODUCTOS_ROOT}/Aji * 100/${existingDocId("Aji * 100")}`;
     expect(byPath.get(ajiPath)).toEqual({
+      nombreCanonico: "Aji * 100",
       sinonimos: script.SNAPSHOT_SYNONYMS["Aji * 100"],
       categoria: "Aji",
     });
@@ -268,5 +269,73 @@ describe("seedCatalog write path", () => {
     );
     expect(refs.batchSet).not.toHaveBeenCalled();
     expect(refs.batchCommit).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════
+// NOMBRE CANONICO — explicit canonical name field
+// ═══════════════════════════════════════════
+
+describe("nombreCanonico in seed", () => {
+  let script: any;
+  let products: string[];
+
+  beforeAll(() => {
+    script = require(scriptPath);
+    products = Object.keys(script.SNAPSHOT_SYNONYMS);
+  });
+
+  it("dryRun() includes nombreCanonico matching the product key in every descriptor", () => {
+    const writes = script.dryRun();
+
+    expect(writes).toHaveLength(24);
+    for (const w of writes) {
+      expect(w).toHaveProperty("nombreCanonico");
+      expect(typeof w.nombreCanonico).toBe("string");
+      expect(w.nombreCanonico).toBe(w.product);
+    }
+  });
+
+  it("seedCatalog writes nombreCanonico alongside sinonimos and categoria", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products));
+
+    await script.seedCatalog(mockDb, script.dryRun());
+
+    const byPath = new Map<string, any>(
+      refs.batchSet.mock.calls.map((call: any[]) => [call[0].path, call[1]])
+    );
+
+    // Spot-check a few representative products
+    const ajiPath = `${PRODUCTOS_ROOT}/Aji * 100/${existingDocId("Aji * 100")}`;
+    expect(byPath.get(ajiPath)).toEqual({
+      nombreCanonico: "Aji * 100",
+      sinonimos: script.SNAPSHOT_SYNONYMS["Aji * 100"],
+      categoria: "Aji",
+    });
+
+    const clavoPath = `${PRODUCTOS_ROOT}/Clavo * 50/${existingDocId("Clavo * 50")}`;
+    expect(byPath.get(clavoPath)).toEqual({
+      nombreCanonico: "Clavo * 50",
+      sinonimos: script.SNAPSHOT_SYNONYMS["Clavo * 50"],
+      categoria: "Clavo",
+    });
+  });
+
+  it("every product in SNAPSHOT_SYNONYMS gets its own nombreCanonico value", async () => {
+    const { mockDb, refs } = scenarioWith(buildProductosStore(products));
+
+    await script.seedCatalog(mockDb, script.dryRun());
+
+    const writtenData = refs.batchSet.mock.calls.map((call: any[]) => call[1]);
+    const nombresCanonico = writtenData.map((d: any) => d.nombreCanonico);
+
+    // All 24 must be present and unique
+    expect(nombresCanonico).toHaveLength(24);
+    expect(new Set(nombresCanonico).size).toBe(24);
+
+    // Each must match a key from SNAPSHOT_SYNONYMS
+    for (const product of products) {
+      expect(nombresCanonico).toContain(product);
+    }
   });
 });

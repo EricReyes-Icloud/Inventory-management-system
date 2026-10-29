@@ -1,6 +1,16 @@
 //-------------------------------------- INTURIS BRAIN ---------------------------------------//
-const { normalizarTexto } = require("../utils/normalizarTexto");
 const catalogLoader = require("../catalog/loader");
+
+// Lazy requires para evitar problemas de cache en tests que manipulan Module._cache
+function getNormalizarTexto() {
+  return require("../utils/normalizarTexto").normalizarTexto;
+}
+function getNormalizarParaEquivalencias() {
+  return require("../utils/normalizarTexto").normalizarParaEquivalencias;
+}
+function getReemplazarNumerosPalabras() {
+  return require("../utils/normalizarTexto").reemplazarNumerosPalabras;
+}
 
 // ----------------------
 // 2. Diccionario de palabras numéricas
@@ -18,12 +28,19 @@ const numerosPalabras = {
   diez: 10
 };
 
+// Función local que usa el lazy require para evitar problemas de cache
 function reemplazarNumerosPalabras(texto) {
-  let palabras = texto.split(/\s+/);
-  return palabras
-    .map(p => (numerosPalabras[p.toLowerCase()] ? numerosPalabras[p.toLowerCase()] : p))
-    .join(" ");
+  return getReemplazarNumerosPalabras()(texto);
 }
+
+// Función local que usa el lazy require para evitar problemas de cache
+function aplicarReglasNegocio(texto) {
+  return require("../utils/normalizarTexto").aplicarReglasNegocio(texto);
+}
+
+// re-export para tests que lo importan directamente
+module.exports.reemplazarNumerosPalabras = reemplazarNumerosPalabras;
+module.exports.aplicarReglasNegocio = aplicarReglasNegocio;
 
 // ----------------------
 // 3. Productos originales — REMOVED: now loaded from Firestore via catalog-loader
@@ -62,7 +79,7 @@ async function interpretarPedido(pedido) {
 
     if (isNaN(cantidad) || cantidad <= 0) cantidad = 1;
 
-    let normalizado = normalizarTexto(textoProducto);
+    let normalizado = getNormalizarParaEquivalencias()(textoProducto);
     console.log("Parte:", parte, "| Normalizado:", normalizado, "| Cantidad:", cantidad);
 
     if (equivalencias.has(normalizado)) {
@@ -138,4 +155,10 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
 }
 
 // Exportamos ambas funciones
-module.exports = { interpretarPedido, procesarMensajeTwilio, normalizarTexto };
+
+// Función local para exportar normalizarParaEquivalencias via lazy require
+function normalizarParaEquivalencias(texto) {
+  return getNormalizarParaEquivalencias()(texto);
+}
+
+module.exports = { interpretarPedido, procesarMensajeTwilio, getNormalizarTexto, aplicarReglasNegocio, reemplazarNumerosPalabras, normalizarParaEquivalencias };

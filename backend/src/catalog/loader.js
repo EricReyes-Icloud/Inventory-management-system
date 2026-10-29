@@ -10,7 +10,7 @@
  */
 
 const Fuse = require("fuse.js");
-const { normalizarTexto } = require("../utils/normalizarTexto");
+const { normalizarTexto, normalizarParaEquivalencias } = require("../utils/normalizarTexto");
 const productosRepo = require("../repositories/productos.repository");
 
 // ── Internal state (swapped atomically on refresh) ────────────────
@@ -27,7 +27,7 @@ function buildEquivalencias(productos) {
   const eq = new Map();
   for (const p of productos) {
     for (const sinonimo of p.sinonimos) {
-      const key = normalizarTexto(sinonimo);
+      const key = normalizarParaEquivalencias(sinonimo);
       eq.set(key, p.nombre);
     }
   }
@@ -37,8 +37,7 @@ function buildEquivalencias(productos) {
 function buildFuseIndex(productos) {
   const items = productos.map((p) => ({
     nombre: p.nombre,
-    // Build a searchable string from nombre + all sinonimos
-    searchText: [p.nombre, ...p.sinonimos].map(normalizarTexto).join(" "),
+    searchText: [p.nombre, ...p.sinonimos].map(normalizarParaEquivalencias).join(" "),
   }));
 
   return new Fuse(items, {

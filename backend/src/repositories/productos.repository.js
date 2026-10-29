@@ -101,7 +101,7 @@ async function getCatalogo() {
       const data = firstDoc.data();
 
       catalogo.push({
-        nombre: subcol.id,
+        nombre: data.nombreCanonico || subcol.id,
         sinonimos: Array.isArray(data.sinonimos) ? data.sinonimos : [],
         categoria: data.categoria || null,
       });

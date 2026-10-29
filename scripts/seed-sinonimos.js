@@ -125,6 +125,7 @@ const SNAPSHOT_CATEGORIES = {
 function dryRun() {
   return Object.entries(SNAPSHOT_SYNONYMS).map(([product, sinonimos]) => ({
     product,
+    nombreCanonico: product,
     sinonimos,
     categoria: SNAPSHOT_CATEGORIES[product] || null,
   }));
@@ -177,7 +178,7 @@ async function seedCatalog(db, entries) {
 
     plan.push({
       ref: subcolSnap.docs[0].ref,
-      data: { sinonimos, categoria },
+      data: { nombreCanonico: product, sinonimos, categoria },
     });
   }
 
@@ -228,7 +229,7 @@ if (require.main === module) {
     console.log(`Would write ${writes.length} product documents:\n`);
     for (const w of writes) {
       console.log(
-        `  ${w.product}: sinonimos=[${w.sinonimos.join(", ")}], categoria=${w.categoria}`
+        `  ${w.product}: nombreCanonico=${w.nombreCanonico}, sinonimos=[${w.sinonimos.join(", ")}], categoria=${w.categoria}`
       );
     }
 
