@@ -247,4 +247,47 @@ describe("ventas.repository", () => {
       expect(mockDb.collection).toHaveBeenCalledWith("Ventas");
     });
   });
+
+  describe("getTodosPedidosPendientesGlobal", () => {
+    it("usa collectionGroup con filtros estadoContable=pendiente y pagado=true", async () => {
+      const fakePedidos = {
+        docs: [
+          { id: "Pedido_Id1", ref: { path: "Ventas/cliente-1/Pedidos/Enero 2026/pedidos/Pedido_Id1" } },
+          { id: "Pedido_Id2", ref: { path: "Ventas/cliente-2/Pedidos/Febrero 2026/pedidos/Pedido_Id2" } },
+        ],
+        empty: false,
+      };
+
+      const mockGet = vi.fn().mockResolvedValue(fakePedidos);
+      const mockOrderBy = vi.fn(() => ({ get: mockGet }));
+      const mockWhere2 = vi.fn(() => ({ orderBy: mockOrderBy }));
+      const mockWhere1 = vi.fn(() => ({ where: mockWhere2 }));
+
+      mockDb.collectionGroup = vi.fn(() => ({ where: mockWhere1 }));
+
+      const resultado = await ventasRepo.getTodosPedidosPendientesGlobal();
+
+      expect(mockDb.collectionGroup).toHaveBeenCalledWith("pedidos");
+      expect(mockWhere1).toHaveBeenCalledWith("estadoContable", "==", "pendiente");
+      expect(mockWhere2).toHaveBeenCalledWith("pagado", "==", true);
+      expect(mockOrderBy).toHaveBeenCalledWith("fechaPedido");
+      expect(resultado.docs).toHaveLength(2);
+    });
+
+    it("retorna snapshot vacio cuando no hay pedidos", async () => {
+      const fakeEmpty = { docs: [], empty: true };
+      const mockGet = vi.fn().mockResolvedValue(fakeEmpty);
+      const mockOrderBy = vi.fn(() => ({ get: mockGet }));
+      const mockWhere2 = vi.fn(() => ({ orderBy: mockOrderBy }));
+      const mockWhere1 = vi.fn(() => ({ where: mockWhere2 }));
+
+      mockDb.collectionGroup = vi.fn(() => ({ where: mockWhere1 }));
+
+      const resultado = await ventasRepo.getTodosPedidosPendientesGlobal();
+
+      expect(resultado.empty).toBe(true);
+      expect(resultado.docs).toHaveLength(0);
+    });
+  });
 });
+

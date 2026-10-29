@@ -68,6 +68,16 @@ function createMockDb(): { mockDb: any; refs: MockRefs } {
     // passthrough: returns the ref string as-is for batch.set
     doc: vi.fn((ref: string) => ref),
     batch: vi.fn(() => batch),
+    // collectionGroup for global pedidos query (job contable optimizado)
+    collectionGroup: vi.fn((name: string) => {
+      if (name !== "pedidos") {
+        return { where: vi.fn(), orderBy: vi.fn(), get: vi.fn() };
+      }
+      const emptyResult = { docs: [], empty: true, size: 0 };
+      const where2 = vi.fn(() => ({ orderBy: vi.fn(() => ({ get: vi.fn().mockResolvedValue(emptyResult) })) }));
+      const where1 = vi.fn(() => ({ where: where2 }));
+      return { where: where1 };
+    }),
   };
 
   return {
@@ -97,6 +107,28 @@ function configurarEscenario(
     months: Record<string, PedidoInput[]>;
   }>,
 ) {
+  // Collect all pedidos from all clients/months for collectionGroup query
+  const allPedidos = [];
+  for (const cliente of clientes) {
+    for (const [mes, pedidos] of Object.entries(cliente.months)) {
+      for (const p of pedidos) {
+        allPedidos.push({
+          id: p.id,
+          data: () => ({
+            pagado: p.pagado,
+            contabilidadAplicada: p.contabilidadAplicada,
+            detalle: p.detalle,
+            fechaPedido: p.fechaPedido,
+          }),
+          ref: {
+            id: p.id,
+            path: `Ventas/${cliente.id}/Pedidos/${mes}/pedidos/${p.id}`,
+          },
+        });
+      }
+    }
+  }
+
   mockDb.collection = vi.fn((name: string) => {
     if (name === "Ventas") {
       return {
@@ -123,26 +155,26 @@ function configurarEscenario(
                         if (colName !== "pedidos") {
                           return { where: vi.fn(), get: vi.fn() };
                         }
+                        const pedidoDocs = pedidos.map((p) => ({
+                          id: p.id,
+                          data: () => ({
+                            pagado: p.pagado,
+                            contabilidadAplicada: p.contabilidadAplicada,
+                            detalle: p.detalle,
+                            fechaPedido: p.fechaPedido,
+                          }),
+                          ref: {
+                            id: p.id,
+                            path: "Ventas/" + clienteId + "/Pedidos/" + mes + "/pedidos/" + p.id,
+                          },
+                        }));
+                        const resolvedValue = {
+                          docs: pedidoDocs,
+                          empty: pedidos.length === 0,
+                          size: pedidos.length,
+                        };
                         return {
-                          where: vi.fn(() => ({
-                            get: vi.fn().mockResolvedValue({
-                              docs: pedidos.map((p) => ({
-                                id: p.id,
-                                data: () => ({
-                                  pagado: p.pagado,
-                                  contabilidadAplicada: p.contabilidadAplicada,
-                                  detalle: p.detalle,
-                                  fechaPedido: p.fechaPedido,
-                                }),
-                                ref: {
-                                  id: p.id,
-                                  path: `Ventas/${clienteId}/Pedidos/${mes}/pedidos/${p.id}`,
-                                },
-                              })),
-                              empty: pedidos.length === 0,
-                              size: pedidos.length,
-                            }),
-                          })),
+                          get: vi.fn().mockResolvedValue(resolvedValue),
                         };
                       }),
                     };
@@ -157,6 +189,21 @@ function configurarEscenario(
     }
     // Safe default for other collections
     return { get: vi.fn(), doc: vi.fn(), collection: vi.fn() };
+  });
+
+  // Configure collectionGroup("pedidos") for global query
+  mockDb.collectionGroup = vi.fn((name: string) => {
+    if (name !== "pedidos") {
+      return { where: vi.fn(), orderBy: vi.fn(), get: vi.fn() };
+    }
+    const makeQuery = (docs: any[]) => {
+      const result = { docs, empty: docs.length === 0, size: docs.length };
+      const orderBy = vi.fn(() => ({ get: vi.fn().mockResolvedValue(result) }));
+      const where2 = vi.fn(() => ({ orderBy }));
+      const where1 = vi.fn(() => ({ where: where2 }));
+      return { where: where1 };
+    };
+    return makeQuery(allPedidos);
   });
 }
 
@@ -178,6 +225,7 @@ beforeAll(async () => {
   };
 
   // 3. Inject mocks into Module._cache before any module is loaded
+
   Module._cache[FIRESTORE_PATH] = {
     exports: mockDb,
     loaded: true,

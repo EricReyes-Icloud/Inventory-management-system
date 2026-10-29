@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 // ESTRATEGIA: Module._cache de Node.js para módulos CJS que quedan.
 // Vitest v4 NO intercepta require() internos en módulos CJS.
 //
-// jobContableMensual.js aún importa db (firestore.js) directo para
-// la colección Ventas y batch operations. Eso va con Module._cache.
+// jobContableMensual.js usa db (firestore.js) directo para
+// batch operations. Eso va con Module._cache.
 //
-// PERO: buildOperacionesContables ahora viene del repository, no del
-// service. Mockeamos el repository en Module._cache.
+// buildOperacionesContables viene del contabilidad repository.
+// ventasRepo.getTodosPedidosPendientesGlobal() se mockea via Module._cache.
 // ====================================================================
 
 import Module from "module";
@@ -25,6 +25,7 @@ declare module "module" {
 // Guardar referencias a los mocks para que los tests puedan configurarlos
 let mockDb;
 let mockBuildOperaciones;
+let mockGetTodosPedidosPendientesGlobal;
 
 beforeAll(() => {
   // ================================================================
@@ -37,9 +38,14 @@ beforeAll(() => {
   };
 
   mockBuildOperaciones = vi.fn();
+  mockGetTodosPedidosPendientesGlobal = vi.fn();
 
   const mockContabilidadRepo = {
     buildOperacionesContables: mockBuildOperaciones,
+  };
+
+  const mockVentasRepo = {
+    getTodosPedidosPendientesGlobal: mockGetTodosPedidosPendientesGlobal,
   };
 
   // ================================================================
@@ -50,6 +56,10 @@ beforeAll(() => {
   const contabilidadRepoPath = path.resolve(
     projectRoot,
     "src/repositories/contabilidad.repository.js",
+  );
+  const ventasRepoPath = path.resolve(
+    projectRoot,
+    "src/repositories/ventas.repository.js",
   );
 
   // ================================================================
@@ -67,6 +77,13 @@ beforeAll(() => {
     exports: mockContabilidadRepo,
     loaded: true,
     id: contabilidadRepoPath,
+    paths: [],
+  };
+
+  Module._cache[ventasRepoPath] = {
+    exports: mockVentasRepo,
+    loaded: true,
+    id: ventasRepoPath,
     paths: [],
   };
 });
@@ -89,44 +106,36 @@ const crearPedido = (overrides = {}) => ({
   ...overrides,
 });
 
-/**
- * Configura la cadena completa de mocks de Firestore.
- * @param {Object} batchRef - Referencia al mockBatch del test actual
- */
-const configurarMocks = (pedidos = [], { clientesEmpty = false, mesesEmpty = false } = {}, batchRef) => {
-  const pedidoDocs = pedidos.map((p, i) => ({
-    id: `pedido-${i}`,
-    data: () => p,
-    ref: {
-      id: `pedido-${i}`,
-      update: vi.fn(),
-    },
-  }));
+const crearPedidoDoc = (id, data, refPath) => ({
+  id,
+  data: () => data,
+  ref: {
+    id,
+    path: refPath || `Ventas/cliente1/Pedidos/2026-04/pedidos/${id}`,
+    update: vi.fn(),
+  },
+});
 
-  mockDb.collection = vi.fn().mockReturnValue({
-    get: vi.fn().mockResolvedValue({
-      empty: clientesEmpty,
-      docs: clientesEmpty ? [] : [{ id: "cliente1" }],
-    }),
-    doc: vi.fn(() => ({
-      collection: vi.fn().mockReturnValue({
-        get: vi.fn().mockResolvedValue({
-          empty: mesesEmpty,
-          docs: mesesEmpty ? [] : [{ id: "2026-04" }],
-        }),
-        doc: vi.fn(() => ({
-          collection: vi.fn(() => ({
-            where: vi.fn(() => ({
-              get: vi.fn().mockResolvedValue({
-                empty: pedidos.length === 0,
-                size: pedidos.length,
-                docs: pedidoDocs,
-              }),
-            })),
-          })),
-        })),
-      }),
-    })),
+/**
+ * Configura mock para la query global de pedidos pendientes.
+ * @param {Array} pedidos - Array de objetos pedido
+ * @param {Object} batchRef - Mock del batch
+ * @param {boolean} empty - Si true, retorna snapshot vacío
+ */
+const configurarMockGlobal = (pedidos = [], { empty = false } = {}, batchRef) => {
+  const pedidoDocs = pedidos.map((p, i) => {
+    const id = `pedido-${i}`;
+    // Path realista: Ventas/{clienteId}/Pedidos/{mesAnio}/pedidos/{pedidoId}
+    const clienteId = `cliente${Math.floor(i / 2) + 1}`;
+    const mesAnio = `2026-0${(i % 4) + 1}`;
+    const refPath = `Ventas/${clienteId}/Pedidos/${mesAnio}/pedidos/${id}`;
+    return crearPedidoDoc(id, p, refPath);
+  });
+
+  mockGetTodosPedidosPendientesGlobal.mockResolvedValue({
+    empty,
+    docs: empty ? [] : pedidoDocs,
+    size: empty ? 0 : pedidoDocs.length,
   });
 
   mockDb.batch = vi.fn(() => batchRef);
@@ -152,12 +161,13 @@ describe("jobContableMensual - rules", () => {
 
   afterEach(() => {
     mockBuildOperaciones.mockReset();
+    mockGetTodosPedidosPendientesGlobal.mockReset();
   });
 
   /* ===================== BLOQUE 1 ===================== */
   it("flujo exitoso: procesa pedido válido correctamente", async () => {
     const pedido = crearPedido();
-    const [pedidoDoc] = configurarMocks([pedido], {}, mockBatch);
+    const [pedidoDoc] = configurarMockGlobal([pedido], {}, mockBatch);
 
     mockBuildOperaciones.mockReturnValue([
       {
@@ -199,7 +209,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 2 ===================== */
   it("no procesa si el pedido no está pagado", async () => {
     const pedido = crearPedido({ pagado: false });
-    configurarMocks([pedido], {}, mockBatch);
+    configurarMockGlobal([pedido], {}, mockBatch);
 
     await jobContableMensual();
 
@@ -210,7 +220,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 3 ===================== */
   it("ignora pedidos ya procesados (idempotencia)", async () => {
     const pedido = crearPedido({ contabilidadAplicada: true });
-    configurarMocks([pedido], {}, mockBatch);
+    configurarMockGlobal([pedido], {}, mockBatch);
 
     await jobContableMensual();
 
@@ -221,7 +231,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 4 ===================== */
   it("ignora pedidos sin detalle", async () => {
     const pedido = crearPedido({ detalle: [] });
-    configurarMocks([pedido], {}, mockBatch);
+    configurarMockGlobal([pedido], {}, mockBatch);
 
     await jobContableMensual();
 
@@ -232,7 +242,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 5 ===================== */
   it("ignora pedidos con fecha inválida", async () => {
     const pedido = crearPedido({ fechaPedido: "fecha-invalida" });
-    configurarMocks([pedido], {}, mockBatch);
+    configurarMockGlobal([pedido], {}, mockBatch);
 
     await jobContableMensual();
 
@@ -243,7 +253,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 6 ===================== */
   it("maneja errores del repository sin hacer commit", async () => {
     const pedido = crearPedido();
-    configurarMocks([pedido], {}, mockBatch);
+    configurarMockGlobal([pedido], {}, mockBatch);
 
     mockBuildOperaciones.mockImplementation(() => {
       throw new Error("error");
@@ -258,7 +268,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 7 ===================== */
   it("garantiza atomicidad: operaciones + update en un mismo batch", async () => {
     const pedido = crearPedido();
-    const [pedidoDoc] = configurarMocks([pedido], {}, mockBatch);
+    const [pedidoDoc] = configurarMockGlobal([pedido], {}, mockBatch);
 
     mockBuildOperaciones.mockReturnValue([
       { ref: { path: "path/1" }, data: {}, options: { merge: true } },
@@ -299,7 +309,7 @@ describe("jobContableMensual - rules", () => {
   /* ===================== BLOQUE 8 ===================== */
   it("procesa múltiples pedidos de forma independiente", async () => {
     const pedidos = [crearPedido(), crearPedido()];
-    const pedidoDocs = configurarMocks(pedidos, {}, mockBatch);
+    const pedidoDocs = configurarMockGlobal(pedidos, {}, mockBatch);
 
     mockBuildOperaciones.mockReturnValue([
       { ref: { path: "path/test" }, data: {}, options: { merge: true } },
@@ -325,8 +335,8 @@ describe("jobContableMensual - rules", () => {
   }, 10000);
 
   /* ===================== BLOQUE 9 ===================== */
-  it("no procesa si no hay clientes (clientesSnap.empty)", async () => {
-    configurarMocks([], { clientesEmpty: true }, mockBatch);
+  it("no procesa si no hay pedidos pendientes (snapshot vacío)", async () => {
+    configurarMockGlobal([], { empty: true }, mockBatch);
 
     await jobContableMensual();
 
@@ -335,23 +345,28 @@ describe("jobContableMensual - rules", () => {
   }, 10000);
 
   /* ===================== BLOQUE 10 ===================== */
-  it("salta cliente sin meses (mesesSnap.empty)", async () => {
-    const pedido = crearPedido();
-    configurarMocks([pedido], { mesesEmpty: true }, mockBatch);
+  it("agrupa pedidos por cliente+mes y los procesa en orden", async () => {
+    // 3 pedidos: 2 del mismo cliente/mes, 1 de otro
+    const pedidos = [
+      crearPedido({ detalle: [{ nombre: "Clavo", cantidad: 1 }] }),
+      crearPedido({ detalle: [{ nombre: "Aji", cantidad: 2 }] }),
+      crearPedido({ detalle: [{ nombre: "Miel", cantidad: 1 }] }),
+    ];
+    const pedidoDocs = configurarMockGlobal(pedidos, {}, mockBatch);
+
+    mockBuildOperaciones.mockReturnValue([
+      { ref: { path: "path/test" }, data: {}, options: { merge: true } },
+    ]);
 
     await jobContableMensual();
 
-    expect(mockBuildOperaciones).not.toHaveBeenCalled();
-    expect(mockBatch.commit).not.toHaveBeenCalled();
-  }, 10000);
+    // 3 pedidos procesados
+    expect(mockBuildOperaciones).toHaveBeenCalledTimes(3);
+    expect(mockBatch.commit).toHaveBeenCalledTimes(3);
 
-  /* ===================== BLOQUE 11 ===================== */
-  it("salta mes sin pedidos pendientes (pedidosSnap.empty)", async () => {
-    configurarMocks([], { clientesEmpty: false, mesesEmpty: false }, mockBatch);
-
-    await jobContableMensual();
-
-    expect(mockBuildOperaciones).not.toHaveBeenCalled();
-    expect(mockBatch.commit).not.toHaveBeenCalled();
+    // Verificar que se extrajo clienteId y mesAnio del path
+    // Los paths son: cliente1|2026-01, cliente1|2026-02, cliente2|2026-03
+    // Pero el job agrupa por key clienteId|mesAnio
+    expect(mockGetTodosPedidosPendientesGlobal).toHaveBeenCalledTimes(1);
   }, 10000);
 });

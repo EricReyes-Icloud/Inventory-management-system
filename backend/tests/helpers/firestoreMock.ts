@@ -277,6 +277,15 @@ export function createMockDb(): { mockDb: any; refs: MockRefs } {
     collection: vi.fn(),
     doc: vi.fn(),
     batch: vi.fn(() => batch),
+    collectionGroup: vi.fn((name: string) => {
+      if (name !== "pedidos") {
+        return { where: vi.fn(), orderBy: vi.fn(), get: vi.fn() };
+      }
+      const emptyResult = { docs: [], empty: true, size: 0 };
+      const where2 = vi.fn(() => ({ orderBy: vi.fn(() => ({ get: vi.fn().mockResolvedValue(emptyResult) })) }));
+      const where1 = vi.fn(() => ({ where: where2 }));
+      return { where: where1 };
+    }),
   };
 
   return { mockDb, refs };
@@ -417,6 +426,30 @@ export function buildMockStore(
     populateInvertir(store, writtenStore, scenario.invertir);
   }
 
+  // ── Collect all pedidos from ventas scenario for collectionGroup query ──
+  const allPedidos = [];
+  if (scenario.ventas) {
+    for (const cliente of scenario.ventas) {
+      for (const [mesAnio, pedidos] of Object.entries(cliente.months)) {
+        for (const p of pedidos) {
+          allPedidos.push({
+            id: p.id,
+            data: () => ({
+              pagado: p.pagado,
+              contabilidadAplicada: p.contabilidadAplicada,
+              detalle: p.detalle,
+              fechaPedido: p.fechaPedido,
+            }),
+            ref: {
+              id: p.id,
+              path: `Ventas/${cliente.id}/Pedidos/${mesAnio}/pedidos/${p.id}`,
+            },
+          });
+        }
+      }
+    }
+  }
+
   // ── Wire mockDb methods ──
 
   mockDb.doc = vi.fn((path: string) => {
@@ -425,6 +458,21 @@ export function buildMockStore(
 
   mockDb.collection = vi.fn((name: string) => {
     return createColRef(name, store, writtenStore, mockRefs);
+  });
+
+  // Configure collectionGroup("pedidos") for global query (job contable optimizado)
+  mockDb.collectionGroup = vi.fn((name: string) => {
+    if (name !== "pedidos") {
+      return { where: vi.fn(), orderBy: vi.fn(), get: vi.fn() };
+    }
+    const makeQuery = (docs: any[]) => {
+      const result = { docs, empty: docs.length === 0, size: docs.length };
+      const orderBy = vi.fn(() => ({ get: vi.fn().mockResolvedValue(result) }));
+      const where2 = vi.fn(() => ({ orderBy }));
+      const where1 = vi.fn(() => ({ where: where2 }));
+      return { where: where1 };
+    };
+    return makeQuery(allPedidos);
   });
 
   // batch is already set up by createMockDb — no need to rewire
