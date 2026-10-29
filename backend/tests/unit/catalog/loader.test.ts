@@ -119,12 +119,12 @@ describe("catalog/loader", () => {
 
   // ── equivalencias ─────────────────────────────────────────────────
   describe("getEquivalencias", () => {
-    it("builds 53 equivalencia entries from sinonimos", async () => {
+    it("builds 50 equivalencia entries from sinonimos (business rules collapse plural/de)", async () => {
       const loader = loadLoader();
       await loader.init();
 
       const eq = loader.getEquivalencias();
-      expect(eq.size).toBe(53);
+      expect(eq.size).toBe(50);
     });
 
     it("resolves normalized key to canonical product name", async () => {

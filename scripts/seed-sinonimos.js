@@ -229,7 +229,7 @@ if (require.main === module) {
     console.log(`Would write ${writes.length} product documents:\n`);
     for (const w of writes) {
       console.log(
-        `  ${w.product}: sinonimos=[${w.sinonimos.join(", ")}], categoria=${w.categoria}`
+        `  ${w.product}: nombreCanonico=${w.nombreCanonico}, sinonimos=[${w.sinonimos.join(", ")}], categoria=${w.categoria}`
       );
     }
 
