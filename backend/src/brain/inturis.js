@@ -155,4 +155,10 @@ async function procesarMensajeTwilio(body, from, clienteDetectado = null) {
 }
 
 // Exportamos ambas funciones
+
+// Función local para exportar normalizarParaEquivalencias via lazy require
+function normalizarParaEquivalencias(texto) {
+  return getNormalizarParaEquivalencias()(texto);
+}
+
 module.exports = { interpretarPedido, procesarMensajeTwilio, getNormalizarTexto, aplicarReglasNegocio, reemplazarNumerosPalabras, normalizarParaEquivalencias };
