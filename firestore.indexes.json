@@ -1,15 +1,13 @@
 {
   "indexes": [
     {
-      "collectionGroup": "Pedidos",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
-        {
-          "fieldPath": "__name__",
-          "order": "DESCENDING"
-        }
-      ],
-      "density": "SPARSE_ALL"
+        { "fieldPath": "estadoContable", "order": "ASCENDING" },
+        { "fieldPath": "pagado", "order": "ASCENDING" },
+        { "fieldPath": "fechaPedido", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

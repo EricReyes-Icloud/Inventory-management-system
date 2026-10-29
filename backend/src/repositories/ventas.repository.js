@@ -158,6 +158,26 @@ async function getTodosClientesConVentas() {
 }
 
 // ═══════════════════════════════════════════
+// COLLECTION GROUP QUERY (JOB CONTABLE OPTIMIZADO)
+// ═══════════════════════════════════════════
+
+/**
+ * Obtiene TODOS los pedidos pendientes y pagados globalmente.
+ * Usa Collection Group Query — UNA sola lectura escalable.
+ * Requiere índice compuesto en colección pedidos:
+ *   estadoContable (ASC), pagado (ASC), fechaPedido (ASC)
+ * @returns {Promise<FirebaseFirestore.QuerySnapshot>}
+ */
+async function getTodosPedidosPendientesGlobal() {
+  return db
+    .collectionGroup("pedidos")
+    .where("estadoContable", "==", "pendiente")
+    .where("pagado", "==", true)
+    .orderBy("fechaPedido")
+    .get();
+}
+
+// ═══════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════
 
@@ -180,4 +200,7 @@ module.exports = {
 
   // Listado completo
   getTodosClientesConVentas,
+
+  // Collection Group (job contable optimizado)
+  getTodosPedidosPendientesGlobal,
 };
