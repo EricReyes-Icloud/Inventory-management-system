@@ -35,6 +35,10 @@ The webhook handler now calls `await getNombresClients()` instead of iterating a
   - 9 unit tests: exports, normalization, length-descending sort, accent handling, doc ID fallback, empty collection, Firestore error, cache TTL behavior, manual invalidation
 - **`backend/tests/unit/whatsapp/webhook.client-detection.test.ts`** (new)
   - 8 integration tests: dynamic client detection, length precedence (`juan carlos` > `juan`), accent normalization, word boundaries (no partial matches), empty Firestore fallback, Firestore error fallback, empty cache fallback, message stripping verified
+- **`backend/tests/unit/whatsapp/webhook.security.test.ts`** (updated)
+  - Added mock for `clientCache.service.js` to prevent CI hangs from real Firestore calls
+- **`backend/tests/unit/whatsapp/webhook.ratelimit.test.ts`** (updated)
+  - Added mock for `clientCache.service.js` to prevent CI hangs from real Firestore calls
 
 ### Documentation
 - **`odd/tasks/whatsapp-client-cache-dynamic-names.md`** (new)

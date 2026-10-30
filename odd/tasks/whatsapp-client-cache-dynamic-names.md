@@ -52,7 +52,8 @@ Check: unit test with mocked empty/failing Firestore collection.
 | T4 | all | inline | Integration tests for WhatsApp webhook using dynamic client cache | ✅ | 8/8 tests pass; precedence, word boundaries, fallbacks, tildes covered
 | T5 | all | inline | Full suite verification (`npm run test:ci`) | ✅ | 291/291 tests pass (28 files)
 | T6 | all | inline | Independent verification (high risk: item 6) | ✅ | Verified: S1-S5 all PASS, 0 blockers, grep returns zero hardcoded names
-| T7 | all | inline | Work-unit commit | ✅ | `b2728d1` feat(whatsapp): dynamic client names from Firestore with length-descending cache (5 files, 634 insertions) |
+| T7 | all | inline | Work-unit commit | ✅ | `b2728d1` feat(whatsapp): dynamic client names from Firestore with length-descending cache (5 files, 634 insertions)
+| T8 | all | inline | Fix CI timeout regression in existing webhook tests | ✅ | `3d93269` test(whatsapp): mock clientCache in existing webhook tests to prevent CI hangs (2 files, mock added for getNombresClients) |
 
 ## Log
 
