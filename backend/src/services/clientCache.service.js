@@ -37,10 +37,12 @@ function normalizarNombre(nome) {
  */
 async function fetchFromFirestore() {
   try {
-    const snap = await db.collection("Clients").get();
+    const snap = await db.collection("Clientes").get();
     if (snap.empty) return [];
     const names = snap.docs.map((doc) => {
-      const raw = doc.data().Name || doc.data().Nombre || doc.id;
+      const data = doc.data() || {};
+      // Prioridad: clienteNombre (como en ventas.service), Nombre, Name, doc.id
+      const raw = data.clienteNombre || data.Nombre || data.Name || doc.id;
       return normalizarNombre(raw);
     });
     // Orden descendente por longitud: "juan carlos" se prueba antes que "juan"
