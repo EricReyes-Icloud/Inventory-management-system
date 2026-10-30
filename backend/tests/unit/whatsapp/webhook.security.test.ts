@@ -18,6 +18,7 @@ const CONFIG_PATH = path.resolve(PROJECT_ROOT, "src/config.js");
 const ADMIN_REPO_PATH = path.resolve(PROJECT_ROOT, "src/repositories/admin.repository.js");
 const INTURIS_PATH = path.resolve(PROJECT_ROOT, "src/brain/inturis.js");
 const WHATSAPP_PATH = path.resolve(PROJECT_ROOT, "src/whatsapp/index.js");
+const CLIENT_CACHE_PATH = path.resolve(PROJECT_ROOT, "src/services/clientCache.service.js");
 
 // ── Mocks ───────────────────────────────────────────────────────────────
 // The Twilio SDK is NOT mocked: the webhook validates real signatures, so
@@ -104,6 +105,15 @@ describe("POST /api/whatsapp/webhook — security", () => {
       },
     } as any;
 
+    // Mock clientCache to avoid real Firestore calls during tests.
+    Module._cache[CLIENT_CACHE_PATH] = {
+      exports: {
+        getNombresClients: vi.fn().mockResolvedValue([]),
+        invalidateCache: vi.fn(),
+        CLIENT_TTL_MS: 300000,
+      },
+    } as any;
+
     // Fresh config (new ADMIN_ALLOWED_NUMBERS) and a fresh router instance so
     // it picks up the injected modules.
     delete Module._cache[CONFIG_PATH];
@@ -117,6 +127,7 @@ describe("POST /api/whatsapp/webhook — security", () => {
     delete Module._cache[ADMIN_REPO_PATH];
     delete Module._cache[INTURIS_PATH];
     delete Module._cache[WHATSAPP_PATH];
+    delete Module._cache[CLIENT_CACHE_PATH];
   });
 
   // ── S1: Twilio signature validation ──────────────────────────────────

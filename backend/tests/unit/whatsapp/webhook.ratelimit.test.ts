@@ -18,6 +18,7 @@ const CONFIG_PATH = path.resolve(PROJECT_ROOT, "src/config.js");
 const ADMIN_REPO_PATH = path.resolve(PROJECT_ROOT, "src/repositories/admin.repository.js");
 const INTURIS_PATH = path.resolve(PROJECT_ROOT, "src/brain/inturis.js");
 const WHATSAPP_PATH = path.resolve(PROJECT_ROOT, "src/whatsapp/index.js");
+const CLIENT_CACHE_PATH = path.resolve(PROJECT_ROOT, "src/services/clientCache.service.js");
 
 // ── Mocks ───────────────────────────────────────────────────────────────
 // Same injection pattern as webhook.security.test.ts: the Twilio SDK is not
@@ -105,6 +106,15 @@ describe("POST /api/whatsapp/webhook — rate limiting (S4)", () => {
       },
     } as any;
 
+    // Mock clientCache to avoid real Firestore calls during tests.
+    Module._cache[CLIENT_CACHE_PATH] = {
+      exports: {
+        getNombresClients: vi.fn().mockResolvedValue([]),
+        invalidateCache: vi.fn(),
+        CLIENT_TTL_MS: 300000,
+      },
+    } as any;
+
     // Fresh config (new RATE_LIMIT_MAX) and a fresh router so it builds a
     // fresh limiter with its own in-memory budget.
     delete Module._cache[CONFIG_PATH];
@@ -120,6 +130,7 @@ describe("POST /api/whatsapp/webhook — rate limiting (S4)", () => {
     delete Module._cache[ADMIN_REPO_PATH];
     delete Module._cache[INTURIS_PATH];
     delete Module._cache[WHATSAPP_PATH];
+    delete Module._cache[CLIENT_CACHE_PATH];
   });
 
   it("allows requests up to the configured maximum", async () => {

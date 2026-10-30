@@ -5,6 +5,7 @@ const { procesarMensajeTwilio } = require("../brain/inturis.js");
 const adminRepo = require("../repositories/admin.repository");
 const { admin: adminConfig } = require("../config");
 const { createWebhookRateLimiter } = require("../middlewares/rateLimit");
+const { getNombresClients } = require("../services/clientCache.service");
 
 const router = express.Router(); // Mini-servidor modular
 router.use(bodyParser.urlencoded({ extended: false })); // Permite el formato de Twilio
@@ -119,8 +120,8 @@ function limpiarMensajePedido(texto) {
 }
 
 // Detecta si el mensaje contiene el nombre de un cliente
-function detectarYRemoverCliente(mensaje) {
-  const clientes = ["hernan", "mauricio", "esperanza", "edwin"];// Debemos cambiar por DB
+async function detectarYRemoverCliente(mensaje) {
+  const clientes = await getNombresClients();
   let clienteDetectado = null;
 
   for (const nombre of clientes) {
@@ -158,7 +159,7 @@ router.post("/webhook", validateTwilioSignature, authorizeAdminSender, webhookRa
     console.log("✨ Mensaje limpio:", mensaje);
 
     // Detectar cliente y limpiar el mensaje de su nombre
-    const { clienteDetectado, mensajeLimpio } = detectarYRemoverCliente(mensaje);
+    const { clienteDetectado, mensajeLimpio } = await detectarYRemoverCliente(mensaje);
     mensaje = mensajeLimpio;
 
     if (clienteDetectado) {
