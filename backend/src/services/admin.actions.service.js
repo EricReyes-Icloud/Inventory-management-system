@@ -46,38 +46,52 @@ async function cerrarCategoria({
   // ======================
 
   if (!totalMesSnap) {
-    throw new Error(`No existe Total Productos para ${mesAnio}`);
+    const err = new Error(`No existe Total Productos para ${mesAnio}`);
+    err.code = "NO_EXISTE_TOTAL_PRODUCTOS";
+    throw err;
   }
 
   if (!cartonesMesSnap) {
-    throw new Error(`No existe Cartones_vendidos para ${mesAnio}`);
+    const err = new Error(`No existe Cartones_vendidos para ${mesAnio}`);
+    err.code = "NO_EXISTE_CARTONES_VENDIDOS";
+    throw err;
   }
 
   if (!invertirSnap) {
-    throw new Error(`No existe inversión registrada para ${categoria}`);
+    const err = new Error(`No existe inversión registrada para ${categoria}`);
+    err.code = "INVERSION_NO_REGISTRADA";
+    throw err;
   }
 
   if (!categoriaTotalSnap) {
-    throw new Error(`La categoría ${categoria} no tiene ventas registradas`);
+    const err = new Error(`La categoría ${categoria} no tiene ventas registradas`);
+    err.code = "CATEGORIA_SIN_VENTAS";
+    throw err;
   }
 
   if (!categoriaCartonesSnap) {
-    throw new Error(`La categoría ${categoria} no tiene cartones vendidos`);
+    const err = new Error(`La categoría ${categoria} no tiene cartones vendidos`);
+    err.code = "CATEGORIA_SIN_CARTONES";
+    throw err;
   }
 
   const categoriaTotal = categoriaTotalSnap.data();
   const categoriaCartones = categoriaCartonesSnap.data();
 
   if (!categoriaTotal.total || categoriaTotal.total <= 0) {
-    throw new Error(
+    const err = new Error(
       `La categoría ${categoria} no tiene ventas para cerrar`
     );
+    err.code = "CATEGORIA_SIN_VENTAS";
+    throw err;
   }
 
   if (!categoriaCartones.total || categoriaCartones.total <= 0) {
-    throw new Error(
+    const err = new Error(
       `La categoría ${categoria} no tiene cartones vendidos`
     );
+    err.code = "CATEGORIA_SIN_CARTONES";
+    throw err;
   }
 
   // ======================
@@ -90,9 +104,11 @@ async function cerrarCategoria({
   });
 
   if (!gananciaCategoria || gananciaCategoria.gananciaNeta === undefined) {
-    throw new Error(
+    const err = new Error(
       `No se pudo calcular ganancia para la categoría ${categoria}`
     );
+    err.code = "GANANCIA_NO_CALCULADA";
+    throw err;
   }
 
   // ======================

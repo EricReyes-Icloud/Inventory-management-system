@@ -45,7 +45,8 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use("/api/admin", require(ADMIN_ROUTES_PATH));
-  app.use("/admin", require(ADMIN_BUTTON_PATH));
+  // S1: admin.button.routes now mounted under /api/admin (was /admin)
+  app.use("/api/admin", require(ADMIN_BUTTON_PATH));
   return app;
 }
 
@@ -152,10 +153,10 @@ describe("POST /api/admin/job-contable (S6)", () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// POST /admin/cerrar-categoria — guarded by the admin auth
+// POST /api/admin/cerrar-categoria — guarded by the admin auth
 // ═══════════════════════════════════════════════════════════
 
-describe("POST /admin/cerrar-categoria (S6)", () => {
+describe("POST /api/admin/cerrar-categoria (S6)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     injectMocks();
@@ -182,7 +183,7 @@ describe("POST /admin/cerrar-categoria (S6)", () => {
 
   it("rejects a request without an authorization header", async () => {
     const res = await request(createApp())
-      .post("/admin/cerrar-categoria")
+      .post("/api/admin/cerrar-categoria")
       .send({ mesAnio: "Junio 2026", categoria: "Salsas" });
 
     expect(res.status).toBe(401);
@@ -193,7 +194,7 @@ describe("POST /admin/cerrar-categoria (S6)", () => {
     verifyIdTokenMock.mockRejectedValue(new Error("invalid token"));
 
     const res = await request(createApp())
-      .post("/admin/cerrar-categoria")
+      .post("/api/admin/cerrar-categoria")
       .set("Authorization", "Bearer not-a-firebase-token")
       .send({ mesAnio: "Junio 2026", categoria: "Salsas" });
 
@@ -205,7 +206,7 @@ describe("POST /admin/cerrar-categoria (S6)", () => {
     getAdminByEmailMock.mockResolvedValue({ empty: true, docs: [] });
 
     const res = await request(createApp())
-      .post("/admin/cerrar-categoria")
+      .post("/api/admin/cerrar-categoria")
       .set("Authorization", "Bearer firebase-token")
       .send({ mesAnio: "Junio 2026", categoria: "Salsas" });
 
@@ -215,7 +216,7 @@ describe("POST /admin/cerrar-categoria (S6)", () => {
 
   it("closes the category when the administrator is authenticated", async () => {
     const res = await request(createApp())
-      .post("/admin/cerrar-categoria")
+      .post("/api/admin/cerrar-categoria")
       .set("Authorization", "Bearer firebase-token")
       .send({ mesAnio: "Junio 2026", categoria: "Salsas" });
 
@@ -229,11 +230,84 @@ describe("POST /admin/cerrar-categoria (S6)", () => {
 
   it("takes the administrator name from the verified token, not from the body", async () => {
     const res = await request(createApp())
-      .post("/admin/cerrar-categoria")
+      .post("/api/admin/cerrar-categoria")
       .set("Authorization", "Bearer firebase-token")
       .send({ mesAnio: "Junio 2026", categoria: "Salsas", adminUsuario: "Alguien" });
 
     expect(res.status).toBe(200);
     expect(cerrarCategoriaMock.mock.calls[0][0].adminUsuario).toBe("Eric");
+  });
+
+  // ── S2: mesAnio format validation ──────────────────────────
+
+  it("rejects mesAnio with invalid format (S2)", async () => {
+    const res = await request(createApp())
+      .post("/api/admin/cerrar-categoria")
+      .set("Authorization", "Bearer firebase-token")
+      .send({ mesAnio: "banana", categoria: "Salsas" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.message).toContain("Formato de mesAnio inválido");
+    expect(cerrarCategoriaMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects mesAnio with invalid month name (S2)", async () => {
+    const res = await request(createApp())
+      .post("/api/admin/cerrar-categoria")
+      .set("Authorization", "Bearer firebase-token")
+      .send({ mesAnio: "2026-13", categoria: "Salsas" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.message).toContain("Mes inválido");
+    expect(cerrarCategoriaMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing categoria (S2)", async () => {
+    const res = await request(createApp())
+      .post("/api/admin/cerrar-categoria")
+      .set("Authorization", "Bearer firebase-token")
+      .send({ mesAnio: "Junio 2026" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.message).toContain("categoria es obligatoria");
+    expect(cerrarCategoriaMock).not.toHaveBeenCalled();
+  });
+
+  // ── S3: safe error messages ────────────────────────────────
+
+  it("returns safe error message for infrastructure errors (S3)", async () => {
+    cerrarCategoriaMock.mockRejectedValue(
+      new Error("Firebase connection timeout: ECONNREFUSED 10.0.0.5:443"),
+    );
+
+    const res = await request(createApp())
+      .post("/api/admin/cerrar-categoria")
+      .set("Authorization", "Bearer firebase-token")
+      .send({ mesAnio: "Junio 2026", categoria: "Salsas" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.message).toBe("Error interno del servidor");
+    // Must NOT leak infrastructure details
+    expect(res.body.message).not.toContain("Firebase");
+    expect(res.body.message).not.toContain("ECONNREFUSED");
+  });
+
+  it("returns domain error message for known business errors (S3)", async () => {
+    const domainError = new Error("La categoría Salsas no tiene ventas para cerrar");
+    (domainError as any).code = "CATEGORIA_SIN_VENTAS";
+    cerrarCategoriaMock.mockRejectedValue(domainError);
+
+    const res = await request(createApp())
+      .post("/api/admin/cerrar-categoria")
+      .set("Authorization", "Bearer firebase-token")
+      .send({ mesAnio: "Junio 2026", categoria: "Salsas" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.message).toContain("no tiene ventas para cerrar");
   });
 });

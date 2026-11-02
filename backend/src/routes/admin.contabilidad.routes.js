@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { adminAuth } = require("../middlewares/adminAuth");
 const orchestrator = require("../services/monthlyClosing.orchestrator");
+const { validateMesAnio } = require("../utils/fechas");
+const { safeErrorMessage } = require("../lib/errorHandler");
 
 /**
  * POST /admin/contabilidad/cerrar-mes
@@ -17,12 +19,8 @@ router.post(
     try {
       const { mesAnio } = req.body;
 
-      if (!mesAnio) {
-        return res.status(400).json({
-          ok: false,
-          message: "mesAnio es obligatorio",
-        });
-      }
+      // Validate mesAnio format before calling service
+      validateMesAnio(mesAnio);
 
       const resultado = await orchestrator.cerrarMes(mesAnio, req.admin);
 
@@ -33,11 +31,13 @@ router.post(
       });
 
     } catch (error) {
-      console.error("❌ Error cierre mensual:", error.message);
+      // Safe message for client; full detail goes to server log
+      const { status, message } = safeErrorMessage(error);
+      console.error("❌ Error cierre mensual:", error);
 
-      return res.status(400).json({
+      return res.status(status).json({
         ok: false,
-        message: error.message,
+        message,
       });
     }
   }
