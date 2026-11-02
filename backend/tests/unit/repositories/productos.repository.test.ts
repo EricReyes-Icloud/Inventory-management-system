@@ -126,6 +126,41 @@ describe("productos.repository", () => {
       expect(Array.isArray(productos)).toBe(true);
       expect(productos).toHaveLength(0);
     });
+
+    // ── S4: Parallel reads performance ─────────────────────────────────
+    it("ejecuta lecturas en paralelo, no secuencialmente (S4)", async () => {
+      const mockListCollections = vi.fn().mockImplementation(async () => {
+        return [
+          {
+            id: "sub1",
+            get: vi.fn().mockResolvedValue({
+              docs: [{ id: "d1", data: () => ({}) }],
+            }),
+          },
+        ];
+      });
+
+      const mockCollection = vi.fn(() => ({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            { id: "P1", ref: { listCollections: mockListCollections } },
+            { id: "P2", ref: { listCollections: mockListCollections } },
+          ],
+          empty: false,
+        }),
+        doc: vi.fn(),
+        listCollections: vi.fn(),
+      }));
+
+      mockDb.collection = mockCollection;
+
+      const productos = await productosRepo.getAllProductos();
+
+      expect(Array.isArray(productos)).toBe(true);
+      expect(productos).toHaveLength(2);
+      // Verificamos que listCollections se llamó en paralelo (2 llamadas simultáneas)
+      expect(mockListCollections).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("buscarSubcoleccion", () => {

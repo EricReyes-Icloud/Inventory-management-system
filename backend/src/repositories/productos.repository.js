@@ -41,28 +41,35 @@ async function getProducto(subcoleccion, docId) {
 
 /**
  * Obtiene todos los productos con sus subcolecciones.
+ * Optimizado con lecturas paralelas (batch=10) para reducir tiempo de ejecución.
  * @returns {Promise<Array<{id: string, subcolecciones: object}>>}
  */
 async function getAllProductos() {
   const productosSnap = await db.collection("Productos").get();
-  const productos = [];
+  const BATCH_SIZE = 10;
+  const promises = [];
 
   for (const productoDoc of productosSnap.docs) {
-    const productoData = { id: productoDoc.id, subcolecciones: {} };
+    const itemPromise = (async () => {
+      const subcolecciones = await productoDoc.ref.listCollections();
+      const subcoleccionesData = {};
 
-    const subcollections = await productoDoc.ref.listCollections();
-    for (const subcol of subcollections) {
-      const subcolSnap = await subcol.get();
-      productoData.subcolecciones[subcol.id] = subcolSnap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
-    }
+      const subcolPromises = subcolecciones.map(async (subcol) => {
+        const subcolSnap = await subcol.get();
+        subcoleccionesData[subcol.id] = subcolSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+      });
 
-    productos.push(productoData);
+      await Promise.all(subcolPromises);
+      return { id: productoDoc.id, subcolecciones: subcoleccionesData };
+    })();
+
+    promises.push(itemPromise);
   }
 
-  return productos;
+  return Promise.all(promises);
 }
 
 /**
