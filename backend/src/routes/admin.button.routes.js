@@ -2,11 +2,13 @@
 const express = require("express");
 const router = express.Router();
 
-const { 
+const {
   cerrarCategoria,
 } = require("../services/admin.actions.service");
 
 const { adminAuth } = require("../middlewares/adminAuth");
+const { validateMesAnio } = require("../utils/fechas");
+const { safeErrorMessage } = require("../lib/errorHandler");
 
 // ------------------------------------
 // 🔒 POST /admin/cerrar-categoria
@@ -18,10 +20,13 @@ router.post("/cerrar-categoria", adminAuth, async (req, res) => {
   try {
     const { mesAnio, categoria } = req.body;
 
-    if (!mesAnio || !categoria) {
+    // Validate mesAnio format before calling service
+    validateMesAnio(mesAnio);
+
+    if (!categoria || typeof categoria !== "string" || !categoria.trim()) {
       return res.status(400).json({
         ok: false,
-        message: "mesAnio y categoria son obligatorios",
+        message: "categoria es obligatoria",
       });
     }
 
@@ -39,11 +44,13 @@ router.post("/cerrar-categoria", adminAuth, async (req, res) => {
       data: resultado,
     });
   } catch (error) {
-    console.error("❌ Error en cierre de categoría:", error.message);
+    // Safe message for client; full detail goes to server log
+    const { status, message } = safeErrorMessage(error);
+    console.error("❌ Error en cierre de categoría:", error);
 
-    return res.status(500).json({
+    return res.status(status).json({
       ok: false,
-      message: error.message,
+      message,
     });
   }
 });

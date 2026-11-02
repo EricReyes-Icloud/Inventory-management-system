@@ -60,7 +60,7 @@ app.use("/api/whatsapp", whatsappRoutes);
 
 app.use("/api/admin", adminRoutes);
 
-app.use("/admin", adminButtonRoutes);
+app.use("/api/admin", adminButtonRoutes);
 
 app.use("/api/admin", adminContabilidadRoutes)
 
