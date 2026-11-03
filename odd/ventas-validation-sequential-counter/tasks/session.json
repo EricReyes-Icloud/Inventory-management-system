@@ -1,0 +1,11 @@
+{
+  "feature": "ventas-validation-sequential-counter",
+  "description": "Fix missing price validation and race condition in order sequential numbering",
+  "tasks": [
+    {"id": "T1", "status": "pending", "title": "Write RED tests for price validation and sequential counter"},
+    {"id": "T2", "status": "pending", "title": "Implement price validation function in ventas.service.js"},
+    {"id": "T3", "status": "pending", "title": "Implement crearPedidoConConsecutivo with Firestore transaction"},
+    {"id": "T4", "status": "pending", "title": "Refactor ventas.service.js to use new methods and preserve contracts"}
+  ],
+  "created_at": "2026-10-30T00:00:00Z"
+}

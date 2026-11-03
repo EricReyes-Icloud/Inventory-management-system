@@ -13,6 +13,65 @@ function normalizar(texto) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/**
+ * Valida que el producto tenga un precio válido.
+ * @param {object} prodSnap - Document snapshot de producto
+ * @param {string} nombreProducto - Nombre del producto para el error
+ * @returns {{valido: boolean, precio?: number, error?: object}}
+ */
+function validarPrecio(prodSnap, nombreProducto) {
+  if (!prodSnap || !prodSnap.exists) {
+    return {
+      valido: false,
+      error: {
+        error: "producto_no_encontrado",
+        detalle: nombreProducto,
+      },
+    };
+  }
+
+  const data = prodSnap.data();
+  const priceField = data["Precio carton"];
+
+  // Caso 1: Campo faltante o null/undefined
+  if (priceField === undefined || priceField === null) {
+    return {
+      valido: false,
+      error: {
+        error: "producto_sin_precio",
+        detalle: nombreProducto,
+      },
+    };
+  }
+
+  // Caso 2: No es número o es NaN
+  const price = Number(priceField);
+  if (isNaN(price)) {
+    return {
+      valido: false,
+      error: {
+        error: "precio_invalido",
+        detalle: nombreProducto,
+        campoValor: priceField,
+        tipo: typeof priceField,
+      },
+    };
+  }
+
+  // Caso 3: Precio 0 o negativo (precio no definido)
+  if (price <= 0) {
+    return {
+      valido: false,
+      error: {
+        error: "producto_sin_precio",
+        detalle: nombreProducto,
+      },
+    };
+  }
+
+  return { valido: true, precio: price };
+}
+
 async function crearPedidoLibre({ cliente, mensaje, productosInterpretados: productosInterpretadosInput } = {}) {
   if (!cliente) {
     return { ok: false, status: 400, body: { error: "cliente_requerido" } };
@@ -95,7 +154,7 @@ async function crearPedidoLibre({ cliente, mensaje, productosInterpretados: prod
   console.log("🧩 Productos normalizados:", productosNormalizados);
 
   // --------------------
-  // 🛒 Procesar productos
+  // 🛒 Procesar productos con validación de precio
   // --------------------
   const items = [];
   let total = 0;
@@ -113,7 +172,9 @@ async function crearPedidoLibre({ cliente, mensaje, productosInterpretados: prod
     }
 
     const prodSnap = await productosRepo.getProducto(subcoleccion, docId);
-    if (!prodSnap) {
+    console.log('[DEBUG] prodSnap:', prodSnap ? { exists: prodSnap.exists, data: () => prodSnap.data() } : null);
+    console.log('[DEBUG] productosDocRef.collection:', require('../lib/firestore').default?._mock || 'no mock');
+    if (!prodSnap || !prodSnap.exists) {
       return {
         ok: false,
         status: 400,
@@ -123,9 +184,18 @@ async function crearPedidoLibre({ cliente, mensaje, productosInterpretados: prod
       };
     }
 
-    const p = prodSnap.data();
-    const unitPrice = Number(p["Precio carton"] || 0);
-    const qty = Number(cantidad || 0);
+    // Validar precio - NO continuar si el precio es inválido
+    const validacion = validarPrecio(prodSnap, subcoleccion);
+    if (!validacion.valido) {
+      return {
+        ok: false,
+        status: 400,
+        body: validacion.error,
+      };
+    }
+
+    const unitPrice = validacion.precio;
+    const qty = Number(cantidad || 1);
     const subtotal = unitPrice * qty;
 
     items.push({
@@ -139,6 +209,18 @@ async function crearPedidoLibre({ cliente, mensaje, productosInterpretados: prod
     });
 
     total += subtotal;
+  }
+
+  // ⚠️ Si ningún producto fue procesado exitosamente
+  if (items.length === 0) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: "ningun_producto_validado",
+        detalle: "Todos los productos identificados fallaron validacion de precio",
+      },
+    };
   }
 
   // 📝 Crear/actualizar documento Venta del cliente

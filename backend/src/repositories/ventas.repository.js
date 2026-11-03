@@ -178,6 +178,105 @@ async function getTodosPedidosPendientesGlobal() {
 }
 
 // ═══════════════════════════════════════════
+// PEDIDO CON CONSECUTIVO ATÓMICO (ANTI-RACE)
+// ═══════════════════════════════════════════
+
+/**
+ * Crea un pedido con número secuencial atómico usando transacción.
+ * Evita colisiones cuando dos pedidos se crean simultáneamente.
+ * Usa un documento contador: Ventas/{clienteId}/Pedidos/{mesAnio}/contador
+ * @param {string} clienteId - ID del cliente
+ * @param {string} mesAnio - Mes-Año del pedido (ej: "Enero 2026")
+ * @param {object} data - Datos completos del pedido
+ * @returns {Promise<{pedidoId: string, numeroPedido: number}>}
+ */
+async function crearPedidoConConsecutivo(clienteId, mesAnio, data) {
+  const contadorRef = db
+    .collection("Ventas")
+    .doc(clienteId)
+    .collection("Pedidos")
+    .doc(mesAnio)
+    .collection("contador");
+
+  const pedidoCollectionRef = contadorRef.collection("pedidos");
+
+  // Verificar si existe el contador
+  const contadorSnap = await contadorRef.get();
+
+  if (!contadorSnap.exists) {
+    // Primer pedido del mes - crear contador y primer pedido
+    await db.runTransaction(async (transaction) => {
+      const newNumero = 1;
+      const pedidoId = `Pedido_Id${newNumero}`;
+
+      // Crear documento del contador
+      transaction.set(contadorRef, {
+        nextNumero: 2,
+        ultimaActualizacion: new Date(),
+      });
+
+      // Crear el primer pedido
+      transaction.set(pedidoCollectionRef.doc(pedidoId), {
+        ...data,
+        pedidoId,
+        numeroPedido: newNumero,
+        creadoEn: new Date(),
+      });
+    });
+
+    return { pedidoId: "Pedido_Id1", numeroPedido: 1 };
+  }
+
+  // Usar transacción para incremento seguro
+  const result = await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(contadorRef);
+    const nextNumero = snap.data().nextNumero;
+    const pedidoId = `Pedido_Id${nextNumero}`;
+
+    // Incrementar contador
+    transaction.update(contadorRef, {
+      nextNumero: nextNumero + 1,
+      ultimaActualizacion: new Date(),
+    });
+
+    // Crear el pedido
+    transaction.set(pedidoCollectionRef.doc(pedidoId), {
+      ...data,
+      pedidoId,
+      numeroPedido: nextNumero,
+      creadoEn: new Date(),
+    });
+
+    return { pedidoId, numeroPedido: nextNumero };
+  });
+
+  return result;
+}
+
+/**
+ * Obtiene el siguiente número de pedido para un cliente/mes sin crear.
+ * @param {string} clienteId
+ * @param {string} mesAnio
+ * @returns {Promise<number>}
+ */
+async function obtenerProximoNumeroPedido(clienteId, mesAnio) {
+  const contadorRef = db
+    .collection("Ventas")
+    .doc(clienteId)
+    .collection("Pedidos")
+    .doc(mesAnio)
+    .collection("contador");
+
+  try {
+    const snap = await contadorRef.get();
+    return snap.exists ? snap.data().nextNumero : 1;
+  } catch (error) {
+    console.error("Error obteniendo numero de pedido:", error);
+    return 1;
+  }
+}
+
+// ═══════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════
 
@@ -197,6 +296,10 @@ module.exports = {
   getPedidos,
   getPedidosPendientes,
   crearPedido,
+
+  // Pedido con consecutivo atómico (anti-race)
+  crearPedidoConConsecutivo,
+  obtenerProximoNumeroPedido,
 
   // Listado completo
   getTodosClientesConVentas,
