@@ -46,6 +46,31 @@ let mockDb: any;
 let mockRefs: MockRefs;
 let processPendingOrders: (...args: any[]) => any;
 
+// Months seeded as already closed (Historico_Mensual exists)
+const closedMonths = new Set<string>();
+
+function marcarMesCerrado(mesAnio: string) {
+  closedMonths.add(mesAnio);
+}
+
+/**
+ * Builds a Historico_Mensual snapshot stub for the given doc path.
+ * Default: the document does not exist (month open).
+ */
+function buildHistoricoSnap(docPath: string) {
+  const mesAnio = docPath.substring("Historico_Mensual/".length);
+  const exists = closedMonths.has(mesAnio);
+  return {
+    exists,
+    id: mesAnio,
+    data: () => ({
+      totalProductos: {},
+      cartonesVendidos: {},
+      estado: "cerrado",
+    }),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Mock builders
 // ═══════════════════════════════════════════════════════════════
@@ -65,8 +90,17 @@ function createMockDb(): { mockDb: any; refs: MockRefs } {
   const mockDb = {
     // collection is set per-test by configurarEscenario
     collection: vi.fn(),
-    // passthrough: returns the ref string as-is for batch.set
-    doc: vi.fn((ref: string) => ref),
+    // passthrough: returns the ref string as-is for batch.set,
+    // except Historico_Mensual reads, which need a document snapshot.
+    doc: vi.fn((ref: string) => {
+      if (typeof ref === "string" && ref.startsWith("Historico_Mensual/")) {
+        return {
+          path: ref,
+          get: vi.fn(() => Promise.resolve(buildHistoricoSnap(ref))),
+        };
+      }
+      return ref;
+    }),
     batch: vi.fn(() => batch),
     // collectionGroup for global pedidos query (job contable optimizado)
     collectionGroup: vi.fn((name: string) => {
@@ -288,6 +322,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  closedMonths.clear();
 
   // Replace mockDb methods with fresh vi.fn instances
   // The repos already hold a reference to the mockDb OBJECT (from beforeAll),
@@ -349,7 +384,7 @@ describe("processPendingOrders - integration", () => {
       const result = await processPendingOrders();
 
       // Return value
-      expect(result).toEqual({ pedidosProcesados: 1, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 1, pedidosFallidos: 0, pedidosRechazados: 0 });
 
       // batch.set was called (buildOperacionesContables ran with real impl)
       expect(mockRefs.batchSet).toHaveBeenCalled();
@@ -380,7 +415,7 @@ describe("processPendingOrders - integration", () => {
 
       const result = await processPendingOrders();
 
-      expect(result).toEqual({ pedidosProcesados: 2, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 2, pedidosFallidos: 0, pedidosRechazados: 0 });
 
       // Each order gets its own batch commit (job loops per pedido)
       expect(mockRefs.batchCommit).toHaveBeenCalledTimes(2);
@@ -415,7 +450,7 @@ describe("processPendingOrders - integration", () => {
 
       const result = await processPendingOrders();
 
-      expect(result).toEqual({ pedidosProcesados: 1, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 1, pedidosFallidos: 0, pedidosRechazados: 0 });
 
       // batch.set was called multiple times (main docs + 6 per item = 14)
       expect(mockRefs.batchSet.mock.calls.length).toBeGreaterThan(10);
@@ -455,7 +490,7 @@ describe("processPendingOrders - integration", () => {
 
       const result = await processPendingOrders();
 
-      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0, pedidosRechazados: 0 });
       expect(mockRefs.batchCommit).not.toHaveBeenCalled();
       expect(mockRefs.batchSet).not.toHaveBeenCalled();
     });
@@ -467,7 +502,7 @@ describe("processPendingOrders - integration", () => {
 
       const result = await processPendingOrders();
 
-      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0, pedidosRechazados: 0 });
       expect(mockRefs.batchCommit).not.toHaveBeenCalled();
       expect(mockRefs.batchSet).not.toHaveBeenCalled();
     });
@@ -481,7 +516,7 @@ describe("processPendingOrders - integration", () => {
 
       const result = await processPendingOrders();
 
-      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0, pedidosRechazados: 0 });
       expect(mockRefs.batchCommit).not.toHaveBeenCalled();
       expect(mockRefs.batchSet).not.toHaveBeenCalled();
     });
@@ -504,9 +539,100 @@ describe("processPendingOrders - integration", () => {
 
       const result = await processPendingOrders();
 
-      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0 });
+      expect(result).toEqual({ pedidosProcesados: 0, pedidosFallidos: 0, pedidosRechazados: 0 });
       expect(mockRefs.batchCommit).not.toHaveBeenCalled();
       expect(mockRefs.batchSet).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("closed-month guard", () => {
+    // ── INT-GUARD-001 — S1/S3/S4 ──────────────────────────────
+    it("INT-GUARD-001: pending paid order on a closed month is parked with zero accounting writes", async () => {
+      marcarMesCerrado("Enero 2026");
+      configurarEscenario([unClienteConMes("Cliente_A", [unPedidoClavo])]);
+
+      const result = await processPendingOrders();
+
+      expect(result).toEqual({
+        pedidosProcesados: 0,
+        pedidosFallidos: 0,
+        pedidosRechazados: 1,
+      });
+
+      // No accounting operation may be queued
+      expect(mockRefs.batchSet).not.toHaveBeenCalled();
+
+      // Exactly one atomic update: the parked state
+      expect(mockRefs.batchCommit).toHaveBeenCalledTimes(1);
+      expect(mockRefs.batchUpdate).toHaveBeenCalledTimes(1);
+      expect(mockRefs.batchUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "pedido-001" }),
+        expect.objectContaining({
+          estadoContable: "rechazado_mes_cerrado",
+          contabilidadAplicada: false,
+          motivoRechazo: "mes_cerrado",
+          mesCerradoObjetivo: "Enero 2026",
+        }),
+      );
+
+      const [, parkedData] = mockRefs.batchUpdate.mock.calls[0];
+      expect(parkedData).not.toHaveProperty("pagado");
+      expect(parkedData.fechaRechazo).toBeInstanceOf(Date);
+    });
+
+    // ── INT-GUARD-002 — S2 (path-key drift) ───────────────────
+    it("INT-GUARD-002: guard keys on obtenerMesAnio(fechaPedido), not on the Pedidos path month", async () => {
+      // Path uses the es-CO producer ("Enero de 2026"); accounting uses "Enero 2026"
+      marcarMesCerrado("Enero 2026");
+      configurarEscenario([
+        { id: "Cliente_A", months: { "Enero de 2026": [unPedidoClavo] } },
+      ]);
+
+      const result = await processPendingOrders();
+
+      expect(result.pedidosRechazados).toBe(1);
+      expect(result.pedidosProcesados).toBe(0);
+      expect(mockRefs.batchSet).not.toHaveBeenCalled();
+    });
+
+    // ── INT-GUARD-003 — no over-blocking ──────────────────────
+    it("INT-GUARD-003: a closed month does not block orders from a different month", async () => {
+      marcarMesCerrado("Diciembre 2025");
+      configurarEscenario([unClienteConMes("Cliente_A", [unPedidoClavo])]);
+
+      const result = await processPendingOrders();
+
+      expect(result).toEqual({
+        pedidosProcesados: 1,
+        pedidosFallidos: 0,
+        pedidosRechazados: 0,
+      });
+      expect(mockRefs.batchSet).toHaveBeenCalled();
+    });
+
+    // ── INT-GUARD-004 — S7 regression ─────────────────────────
+    it("INT-GUARD-004: open month keeps the previous accounting behavior", async () => {
+      configurarEscenario([unClienteConMes("Cliente_A", [unPedidoClavo])]);
+
+      const result = await processPendingOrders();
+
+      expect(result.pedidosProcesados).toBe(1);
+      expect(mockRefs.batchUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "pedido-001" }),
+        expect.objectContaining({ estadoContable: "procesado" }),
+      );
+    });
+
+    // ── INT-GUARD-005 — S9 ────────────────────────────────────
+    it("INT-GUARD-005: accounting writes never re-assert estado 'abierto'", async () => {
+      configurarEscenario([unClienteConMes("Cliente_A", [unPedidoClavo])]);
+
+      await processPendingOrders();
+
+      const writesWithEstado = mockRefs.batchSet.mock.calls.filter(
+        ([, data]: [any, any]) => data?.estado !== undefined,
+      );
+      expect(writesWithEstado).toHaveLength(0);
     });
   });
 });

@@ -60,6 +60,20 @@ async function getHistoricoMensual(mesAnio) {
   return snap.exists ? snap : null;
 }
 
+/**
+ * Un mes está cerrado cuando existe su snapshot Historico_Mensual.
+ * Ese documento es el punto de congelamiento contable: se escribe con
+ * estado "cerrado" y generarHistoricoMensual se niega a regenerarlo.
+ * Ganancias es derivado de ese snapshot y puede quedar parcial, por lo que
+ * NO es la señal primaria de cierre.
+ * @param {string} mesAnio
+ * @returns {Promise<boolean>}
+ */
+async function isMesCerrado(mesAnio) {
+  const historico = await getHistoricoMensual(mesAnio);
+  return historico !== null;
+}
+
 // ═══════════════════════════════════════════
 // LECTURAS — SUBS
 // ═══════════════════════════════════════════
@@ -132,7 +146,6 @@ function crearOperacionDocumentoPrincipal(mesAnio) {
     data: {
       mesAnio,
       totalGeneral: FieldValue.increment(0),
-      estado: "abierto",
       creadoEn: FieldValue.serverTimestamp(),
       actualizadoEn: FieldValue.serverTimestamp(),
     },
@@ -146,7 +159,6 @@ function crearOperacionCartonesPrincipal(mesAnio) {
     data: {
       mesAnio,
       totalGeneral: FieldValue.increment(0),
-      estado: "abierto",
       creadoEn: FieldValue.serverTimestamp(),
       actualizadoEn: FieldValue.serverTimestamp(),
     },
@@ -403,6 +415,7 @@ module.exports = {
   getTotalProductos,
   getCartonesVendidos,
   getHistoricoMensual,
+  isMesCerrado,
 
   // Lecturas — subcolecciones
   getCategoriasTotalProductos,
