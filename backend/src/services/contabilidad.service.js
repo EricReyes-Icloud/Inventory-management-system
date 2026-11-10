@@ -3,7 +3,9 @@
 // Toda la interacción con Firestore está delegada a contabilidad.repository.js
 
 const contabilidadRepo = require("../repositories/contabilidad.repository");
+const ventasRepo = require("../repositories/ventas.repository");
 const catalogLoader = require("../catalog/loader");
+const { obtenerMesAnio } = require("../utils/fechas");
 
 /* ================= HISTÓRICO MENSUAL ================= */
 
@@ -84,10 +86,59 @@ async function generarHistoricoMensual(mesAnio, admin) {
   return { totalProductos, cartonesVendidos };
 }
 
+/* ================= CLOSE PRECHECKS ================= */
+
+/**
+ * Fails fast when the month is already closed.
+ * The freeze point is the existence of Historico_Mensual/{mesAnio}.
+ *
+ * @param {string} mesAnio — canonical "Mes AAAA" label
+ * @throws {Error} with code "MES_YA_CERRADO"
+ */
+async function assertMesNoCerrado(mesAnio) {
+  const cerrado = await contabilidadRepo.isMesCerrado(mesAnio);
+  if (cerrado) {
+    const error = new Error(`El histórico para ${mesAnio} ya fue generado`);
+    error.code = "MES_YA_CERRADO";
+    throw error;
+  }
+}
+
+/**
+ * Fails fast when paid orders for the month are still pending accounting.
+ * Grouping MUST use obtenerMesAnio(fechaPedido), never the Pedidos path key.
+ *
+ * @param {string} mesAnio — canonical "Mes AAAA" label
+ * @throws {Error} with code "PEDIDOS_PENDIENTES"
+ */
+async function assertSinPedidosPendientes(mesAnio) {
+  const pendientesSnap = await ventasRepo.getTodosPedidosPendientesGlobal();
+
+  const pendientesDelMes = pendientesSnap.docs.filter((doc) => {
+    const pedido = doc.data();
+    const fechaPedido =
+      pedido.fechaPedido?.toDate?.() ?? pedido.fechaPedido;
+    return (
+      fechaPedido instanceof Date &&
+      obtenerMesAnio(fechaPedido) === mesAnio
+    );
+  });
+
+  if (pendientesDelMes.length > 0) {
+    const error = new Error(
+      `Quedan ${pendientesDelMes.length} pedidos pendientes en ${mesAnio}`
+    );
+    error.code = "PEDIDOS_PENDIENTES";
+    throw error;
+  }
+}
+
 /* ================= EXPORTS ================= */
 
 module.exports = {
   generarHistoricoMensual,
+  assertMesNoCerrado,
+  assertSinPedidosPendientes,
   obtenerCategoria: catalogLoader.getCategoria,
   buildOperacionesContables: contabilidadRepo.buildOperacionesContables,
 };

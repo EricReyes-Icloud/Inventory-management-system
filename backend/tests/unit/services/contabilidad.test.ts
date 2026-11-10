@@ -20,6 +20,8 @@ const mockGetSkusCartonesVendidos = vi.fn();
 const mockSetHistoricoMensual = vi.fn();
 const mockBuildOperacionesContables = vi.fn();
 const mockGetCategoria = vi.fn();
+const mockIsMesCerrado = vi.fn();
+const mockGetTodosPedidosPendientesGlobal = vi.fn();
 
 let contabilidadService: any;
 
@@ -63,9 +65,13 @@ beforeEach(() => {
   mockSetHistoricoMensual.mockReset();
   mockGetCategoria.mockReset();
   mockBuildOperacionesContables.mockReset();
+  mockIsMesCerrado.mockReset();
+  mockGetTodosPedidosPendientesGlobal.mockReset();
 
   // Default mocks: no duplicate, empty data
   mockGetHistoricoMensual.mockResolvedValue(null);
+  mockIsMesCerrado.mockResolvedValue(false);
+  mockGetTodosPedidosPendientesGlobal.mockResolvedValue(emptySnapshot());
   mockGetCategoriasTotalProductos.mockResolvedValue(emptySnapshot());
   mockGetSkusTotalProductos.mockResolvedValue(emptySnapshot());
   mockGetCategoriasCartonesVendidos.mockResolvedValue(emptySnapshot());
@@ -85,6 +91,19 @@ beforeEach(() => {
       getSkusCartonesVendidos: mockGetSkusCartonesVendidos,
       setHistoricoMensual: mockSetHistoricoMensual,
       buildOperacionesContables: mockBuildOperacionesContables,
+      isMesCerrado: mockIsMesCerrado,
+    },
+    loaded: true,
+  } as any;
+
+  // Pre-seed ventas.repository in Module._cache
+  const ventasRepoPath = path.resolve(
+    projectRoot,
+    "src/repositories/ventas.repository.js"
+  );
+  Module._cache[ventasRepoPath] = {
+    exports: {
+      getTodosPedidosPendientesGlobal: mockGetTodosPedidosPendientesGlobal,
     },
     loaded: true,
   } as any;
@@ -115,6 +134,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   const modules = [
     "src/repositories/contabilidad.repository.js",
+    "src/repositories/ventas.repository.js",
     "src/catalog/loader.js",
     "src/services/contabilidad.service.js",
   ];
@@ -129,10 +149,12 @@ afterEach(() => {
 // ══════════════════════════════════════════════════════════════════════════
 
 describe("contabilidad.service exports", () => {
-  it("exports exactly 3 functions: generarHistoricoMensual, obtenerCategoria, buildOperacionesContables", () => {
+  it("exports the close prechecks plus the existing 3 functions", () => {
     const keys = Object.keys(contabilidadService);
     expect(keys).toEqual([
       "generarHistoricoMensual",
+      "assertMesNoCerrado",
+      "assertSinPedidosPendientes",
       "obtenerCategoria",
       "buildOperacionesContables",
     ]);
@@ -149,6 +171,82 @@ describe("contabilidad.service exports", () => {
     expect(contabilidadService.buildOperacionesContables).toBe(
       mockBuildOperacionesContables
     );
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// Close prechecks
+// ══════════════════════════════════════════════════════════════════════════
+
+describe("assertMesNoCerrado", () => {
+  it("resuelve cuando el mes no está cerrado", async () => {
+    mockIsMesCerrado.mockResolvedValue(false);
+
+    await expect(
+      contabilidadService.assertMesNoCerrado("Enero 2026")
+    ).resolves.toBeUndefined();
+  });
+
+  it("lanza MES_YA_CERRADO cuando existe Historico_Mensual", async () => {
+    mockIsMesCerrado.mockResolvedValue(true);
+
+    await expect(
+      contabilidadService.assertMesNoCerrado("Enero 2026")
+    ).rejects.toMatchObject({
+      code: "MES_YA_CERRADO",
+      message: expect.stringContaining("Enero 2026"),
+    });
+  });
+});
+
+describe("assertSinPedidosPendientes", () => {
+  function pendienteSnap(fechaPedido: any) {
+    return {
+      docs: [{ data: () => ({ fechaPedido, pagado: true }) }],
+      empty: false,
+      size: 1,
+    };
+  }
+
+  it("resuelve cuando no hay pedidos pendientes", async () => {
+    mockGetTodosPedidosPendientesGlobal.mockResolvedValue(emptySnapshot());
+
+    await expect(
+      contabilidadService.assertSinPedidosPendientes("Enero 2026")
+    ).resolves.toBeUndefined();
+  });
+
+  it("lanza PEDIDOS_PENDIENTES con el conteo cuando el mes tiene pendientes", async () => {
+    mockGetTodosPedidosPendientesGlobal.mockResolvedValue(
+      pendienteSnap(new Date("2026-01-15"))
+    );
+
+    await expect(
+      contabilidadService.assertSinPedidosPendientes("Enero 2026")
+    ).rejects.toMatchObject({
+      code: "PEDIDOS_PENDIENTES",
+      message: expect.stringContaining("1 pedidos pendientes en Enero 2026"),
+    });
+  });
+
+  it("ignora pedidos pendientes de otros meses", async () => {
+    mockGetTodosPedidosPendientesGlobal.mockResolvedValue(
+      pendienteSnap(new Date("2026-02-15"))
+    );
+
+    await expect(
+      contabilidadService.assertSinPedidosPendientes("Enero 2026")
+    ).resolves.toBeUndefined();
+  });
+
+  it("soporta fechaPedido como Firestore Timestamp (toDate)", async () => {
+    mockGetTodosPedidosPendientesGlobal.mockResolvedValue(
+      pendienteSnap({ toDate: () => new Date("2026-01-20") })
+    );
+
+    await expect(
+      contabilidadService.assertSinPedidosPendientes("Enero 2026")
+    ).rejects.toMatchObject({ code: "PEDIDOS_PENDIENTES" });
   });
 });
 

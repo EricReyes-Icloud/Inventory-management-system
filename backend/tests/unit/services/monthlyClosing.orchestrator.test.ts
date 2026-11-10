@@ -21,6 +21,8 @@ const mockProcessPendingOrders = vi.fn();
 const mockGenerarHistoricoMensual = vi.fn();
 const mockCerrarGananciasPorCategoria = vi.fn();
 const mockRegistrarCierre = vi.fn();
+const mockAssertMesNoCerrado = vi.fn();
+const mockAssertSinPedidosPendientes = vi.fn();
 
 beforeEach(() => {
   // Reset mocks
@@ -28,6 +30,8 @@ beforeEach(() => {
   mockGenerarHistoricoMensual.mockReset();
   mockCerrarGananciasPorCategoria.mockReset();
   mockRegistrarCierre.mockReset();
+  mockAssertMesNoCerrado.mockReset();
+  mockAssertSinPedidosPendientes.mockReset();
 
   // Mock jobContableMensual
   const jobPath = path.resolve(projectRoot, "src/jobs/jobContableMensual.js");
@@ -44,6 +48,8 @@ beforeEach(() => {
   Module._cache[contabilidadPath] = {
     exports: {
       generarHistoricoMensual: mockGenerarHistoricoMensual,
+      assertMesNoCerrado: mockAssertMesNoCerrado,
+      assertSinPedidosPendientes: mockAssertSinPedidosPendientes,
     },
     loaded: true,
   } as any;
@@ -172,6 +178,47 @@ describe("monthlyClosing.orchestrator", () => {
           { categoria: "Otra", gananciaNeta: 1000 },
         ],
       });
+    });
+
+    // ──────────────────────────────────────────────
+    // Closed-month fail-fast (S5)
+    // ──────────────────────────────────────────────
+
+    it("si el mes ya está cerrado, falla antes de la etapa 1 y no contabiliza nada", async () => {
+      const err = new Error("El histórico para Enero 2026 ya fue generado");
+      (err as any).code = "MES_YA_CERRADO";
+      mockAssertMesNoCerrado.mockRejectedValue(err);
+
+      await expect(
+        orchestrator.cerrarMes("Enero 2026", adminMock)
+      ).rejects.toThrow("ya fue generado");
+
+      expect(mockProcessPendingOrders).not.toHaveBeenCalled();
+      expect(mockGenerarHistoricoMensual).not.toHaveBeenCalled();
+    });
+
+    // ──────────────────────────────────────────────
+    // Pending orders precheck (S6)
+    // ──────────────────────────────────────────────
+
+    it("si quedan pedidos pendientes en el mes, no genera el snapshot", async () => {
+      mockProcessPendingOrders.mockResolvedValue({
+        pedidosProcesados: 1,
+        pedidosFallidos: 1,
+        pedidosRechazados: 0,
+      });
+      const err = new Error("Quedan 1 pedidos pendientes en Enero 2026");
+      (err as any).code = "PEDIDOS_PENDIENTES";
+      mockAssertSinPedidosPendientes.mockRejectedValue(err);
+
+      await expect(
+        orchestrator.cerrarMes("Enero 2026", adminMock)
+      ).rejects.toThrow("pedidos pendientes");
+
+      expect(mockProcessPendingOrders).toHaveBeenCalledOnce();
+      expect(mockGenerarHistoricoMensual).not.toHaveBeenCalled();
+      expect(mockCerrarGananciasPorCategoria).not.toHaveBeenCalled();
+      expect(mockRegistrarCierre).not.toHaveBeenCalled();
     });
 
     // ──────────────────────────────────────────────

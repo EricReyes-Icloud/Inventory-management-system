@@ -29,6 +29,10 @@ async function cerrarMes(mesAnio, admin) {
 
   console.log(`🏁 Iniciando cierre mensual: ${mesAnio} por ${admin.nombre || admin.uid}`);
 
+  // Fail fast BEFORE Stage 1: a closed month must not receive new
+  // contabilizations. Called outside the try so the typed error code survives.
+  await contabilidadService.assertMesNoCerrado(mesAnio);
+
   // ──────────────────────────────────────────────────
   // Stage 1: Process pending orders
   // ──────────────────────────────────────────────────
@@ -40,6 +44,10 @@ async function cerrarMes(mesAnio, admin) {
     console.error(`❌ Stage 1/4 (processPendingOrders) falló: ${error.message}`);
     throw new Error(`Error en etapa 1 (procesar pedidos): ${error.message}`);
   }
+
+  // Fail fast BEFORE Stage 2: never freeze a snapshot while the month still
+  // has paid pending orders. Called outside the try so the code survives.
+  await contabilidadService.assertSinPedidosPendientes(mesAnio);
 
   // ──────────────────────────────────────────────────
   // Stage 2: Generate monthly snapshot

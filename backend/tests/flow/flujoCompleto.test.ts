@@ -281,7 +281,7 @@ describe("cerrarMes - edge cases (Phase 3)", () => {
   });
 
   describe("FLUJO-EDGE-002: Already-closed month", () => {
-    it("Stage 2 throws historical already generated, stages 3-4 skip", async () => {
+    it("fails fast before Stage 1, stages 2-4 skip", async () => {
       const scenario: Scenario = {
         ventas: [],
         totalProductos: {},
@@ -299,9 +299,12 @@ describe("cerrarMes - edge cases (Phase 3)", () => {
       buildMockStore(scenario, mockDb, mockRefs);
 
       await expect(cerrarMes("Enero 2026", admin)).rejects.toThrow(
-        "Error en etapa 2 (generar histórico): El histórico para Enero 2026 ya fue generado",
+        "El histórico para Enero 2026 ya fue generado",
       );
 
+      // Fail-fast happens BEFORE Stage 1: nothing is processed.
+      expect(mockRefs.batchCommit).not.toHaveBeenCalled();
+      expect(mockRefs.setHistoricoMensual).not.toHaveBeenCalled();
       expect(mockRefs.setGanancias).not.toHaveBeenCalled();
       expect(mockRefs.setCierreContable).not.toHaveBeenCalled();
       expect(mockRefs.setAdminAction).not.toHaveBeenCalled();
