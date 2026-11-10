@@ -80,6 +80,15 @@ async function getGanancias(mesAnio) {
   return snap.exists ? snap : null;
 }
 
+/**
+ * Retrieves every Ganancias document (one per closed month).
+ * Read-only: used by the closed-month audit.
+ * @returns {Promise<FirebaseFirestore.QuerySnapshot>}
+ */
+async function getTodasGanancias() {
+  return db.collection("Ganancias").get();
+}
+
 // ═══════════════════════════════════════════
 // WRITE — GANANCIAS
 // ═══════════════════════════════════════════
@@ -184,6 +193,7 @@ module.exports = {
   getCostosVariables,
   getCostosVariablesPorProducto,
   getGanancias,
+  getTodasGanancias,
   setGanancias,
   setHistoricoCompras,
   resetCostosVariables,
