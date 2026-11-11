@@ -42,6 +42,7 @@ beforeAll(() => {
 
   const mockContabilidadRepo = {
     buildOperacionesContables: mockBuildOperaciones,
+    isMesCerrado: vi.fn().mockResolvedValue(false),
   };
 
   const mockVentasRepo = {

@@ -427,19 +427,21 @@ export function buildMockStore(
   }
 
   // ── Collect all pedidos from ventas scenario for collectionGroup query ──
-  const allPedidos = [];
+  // Each entry keeps a mutable copy of the pedido so batch.update() is
+  // observable by a later query, like real Firestore.
+  const allPedidos: Array<{
+    pedido: Record<string, any>;
+    data: () => Record<string, any>;
+    ref: { id: string; path: string };
+  }> = [];
   if (scenario.ventas) {
     for (const cliente of scenario.ventas) {
       for (const [mesAnio, pedidos] of Object.entries(cliente.months)) {
         for (const p of pedidos) {
+          const pedidoData = { ...p };
           allPedidos.push({
-            id: p.id,
-            data: () => ({
-              pagado: p.pagado,
-              contabilidadAplicada: p.contabilidadAplicada,
-              detalle: p.detalle,
-              fechaPedido: p.fechaPedido,
-            }),
+            pedido: pedidoData,
+            data: () => pedidoData,
             ref: {
               id: p.id,
               path: `Ventas/${cliente.id}/Pedidos/${mesAnio}/pedidos/${p.id}`,
@@ -449,6 +451,15 @@ export function buildMockStore(
       }
     }
   }
+
+  // Apply batch.update() payloads to the in-memory pedido so a later
+  // collectionGroup query sees the post-Stage-1 state.
+  mockRefs.batchUpdate.mockImplementation((ref: any, data: any) => {
+    const target = allPedidos.find((p) => p.ref.path === ref?.path);
+    if (target) {
+      Object.assign(target.pedido, data);
+    }
+  });
 
   // ── Wire mockDb methods ──
 
@@ -465,14 +476,21 @@ export function buildMockStore(
     if (name !== "pedidos") {
       return { where: vi.fn(), orderBy: vi.fn(), get: vi.fn() };
     }
-    const makeQuery = (docs: any[]) => {
+    const makeQuery = () => {
+      // Mirror the real query: only pending AND paid pedidos are returned.
+      const docs = allPedidos
+        .filter((p) => {
+          const data = p.data();
+          return data.estadoContable === "pendiente" && data.pagado === true;
+        })
+        .map((p) => ({ id: p.ref.id, data: p.data, ref: p.ref }));
       const result = { docs, empty: docs.length === 0, size: docs.length };
       const orderBy = vi.fn(() => ({ get: vi.fn().mockResolvedValue(result) }));
       const where2 = vi.fn(() => ({ orderBy }));
       const where1 = vi.fn(() => ({ where: where2 }));
       return { where: where1 };
     };
-    return makeQuery(allPedidos);
+    return makeQuery();
   });
 
   // batch is already set up by createMockDb — no need to rewire

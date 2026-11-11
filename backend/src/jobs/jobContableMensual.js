@@ -1,6 +1,7 @@
 const db = require("../lib/firestore");
 const contabilidadRepo = require("../repositories/contabilidad.repository");
 const ventasRepo = require("../repositories/ventas.repository");
+const { obtenerMesAnio } = require("../utils/fechas");
 
 /**
  * Processes all pending orders across clients and months.
@@ -8,17 +9,34 @@ const ventasRepo = require("../repositories/ventas.repository");
  * Idempotent: skips orders that are already processed (contabilidadAplicada === true)
  * or not paid. Builds atomic batch operations via contabilidadRepo and commits them.
  *
- * @returns {Promise<{pedidosProcesados: number, pedidosFallidos: number}>}
+ * Closed-month guard: an order whose period is already closed
+ * (Historico_Mensual exists) is NOT contabilized. It is parked as
+ * estadoContable "rechazado_mes_cerrado" so it leaves the pending queue and
+ * stays visible for manual resolution.
+ *
+ * @returns {Promise<{pedidosProcesados: number, pedidosFallidos: number, pedidosRechazados: number}>}
  */
 async function processPendingOrders() {
   console.log("🔄 Iniciando Job Contable (optimizado)");
+
+  // One closed-month read per month per run (not one per order)
+  const mesesCerrados = new Map();
+  async function mesEstaCerrado(mesAnio) {
+    if (!mesesCerrados.has(mesAnio)) {
+      mesesCerrados.set(
+        mesAnio,
+        await contabilidadRepo.isMesCerrado(mesAnio)
+      );
+    }
+    return mesesCerrados.get(mesAnio);
+  }
 
   // UNA sola query global — O(1) reads para descubrimiento
   const pedidosSnap = await ventasRepo.getTodosPedidosPendientesGlobal();
 
   if (pedidosSnap.empty) {
     console.log("ℹ️ No hay pedidos pendientes");
-    return { pedidosProcesados: 0, pedidosFallidos: 0 };
+    return { pedidosProcesados: 0, pedidosFallidos: 0, pedidosRechazados: 0 };
   }
 
   // Agrupar por cliente+mes para batch atómico por pedido (mantener idempotency)
@@ -43,6 +61,7 @@ async function processPendingOrders() {
 
   let pedidosProcesados = 0;
   let pedidosFallidos = 0;
+  let pedidosRechazados = 0;
 
   // Procesar en grupos por cliente+mes
   for (const [key, pedidos] of pedidosPorClienteMes) {
@@ -74,6 +93,40 @@ async function processPendingOrders() {
 
       if (!(fechaPedido instanceof Date)) {
         console.error(`❌ Pedido ${pedidoRef.id} sin fecha válida`);
+        continue;
+      }
+
+      // 🚫 Guard de mes cerrado. El mes contable se deriva de la fecha del
+      // pedido (misma fuente que buildOperacionesContables), NUNCA del id del
+      // path de Pedidos: ese id usa toLocaleString("es-CO") ("Septiembre de
+      // 2025") y apunta a un documento que no existe para contabilidad.
+      const mesObjetivo = obtenerMesAnio(fechaPedido);
+
+      if (await mesEstaCerrado(mesObjetivo)) {
+        // Estacionar el pedido: sale de la cola de pendientes y queda visible
+        // con un motivo auditable. No se aplica ninguna operación contable.
+        try {
+          const batchRechazo = db.batch();
+          batchRechazo.update(pedidoRef, {
+            estadoContable: "rechazado_mes_cerrado",
+            contabilidadAplicada: false,
+            motivoRechazo: "mes_cerrado",
+            mesCerradoObjetivo: mesObjetivo,
+            fechaRechazo: new Date(),
+          });
+          await batchRechazo.commit();
+
+          pedidosRechazados++;
+          console.warn(
+            `⛔ Pedido ${pedidoRef.id} rechazado: ${mesObjetivo} ya está cerrado`
+          );
+        } catch (error) {
+          pedidosFallidos++;
+          console.error(
+            `❌ No se pudo estacionar el pedido ${pedidoRef.id} | mes cerrado: ${mesObjetivo}`
+          );
+          console.error("🧨 Detalle:", error.message);
+        }
         continue;
       }
 
@@ -121,8 +174,9 @@ async function processPendingOrders() {
   console.log("🏁 Job Contable finalizado");
   console.log(`✅ Procesados: ${pedidosProcesados}`);
   console.log(`❌ Fallidos: ${pedidosFallidos}`);
+  console.log(`⛔ Rechazados (mes cerrado): ${pedidosRechazados}`);
 
-  return { pedidosProcesados, pedidosFallidos };
+  return { pedidosProcesados, pedidosFallidos, pedidosRechazados };
 }
 
 /**
