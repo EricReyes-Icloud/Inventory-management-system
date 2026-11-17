@@ -2,6 +2,7 @@
 const ventasRepo = require("../repositories/ventas.repository");
 const productosRepo = require("../repositories/productos.repository");
 const catalogLoader = require("../catalog/loader");
+const { obtenerMesAnio } = require("../utils/fechas");
 
 /**
  * Normaliza texto: lower case + quita tildes.
@@ -234,11 +235,7 @@ async function crearPedidoLibre({ cliente, mensaje, productosInterpretados: prod
   // 📝 Crear pedido (Pedido_Id manual + estructura correcta)
   // --------------------
   const fecha = new Date();
-  const mesAnio = fecha.toLocaleString("es-CO", {
-    month: "long",
-    year: "numeric",
-  });
-  const mesAnioKey = mesAnio.charAt(0).toUpperCase() + mesAnio.slice(1);
+  const mesAnioKey = obtenerMesAnio(fecha);
 
   // 🧾 Descripción del pedido
   const descripcionPedido = items
