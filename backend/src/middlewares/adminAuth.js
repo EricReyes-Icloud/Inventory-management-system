@@ -49,9 +49,9 @@ async function adminAuth(req, res, next) {
       });
     }
 
-    /* Buscar en colección Admin
+    /* Buscar en Admin, Admin_2 y Admin_3.
        No confiamos solo en el Token, tambien buscamos en nuestra DB */
-    const adminSnap = await adminRepo.getAdminByEmail(email);
+    const adminSnap = await adminRepo.getAdminByEmailAnyCollection(email);
 
     if (adminSnap.empty) {
       return res.status(403).json({

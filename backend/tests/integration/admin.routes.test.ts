@@ -33,7 +33,7 @@ const FIREBASE_ADMIN_PATH = require.resolve("firebase-admin");
 // ── Mocks ───────────────────────────────────────────────────────────────
 const jobContableMensualMock = vi.fn();
 const cerrarCategoriaMock = vi.fn();
-const getAdminByEmailMock = vi.fn();
+const getAdminByEmailAnyCollectionMock = vi.fn();
 const verifyIdTokenMock = vi.fn();
 
 const ADMIN_TOKEN = "test-admin-token";
@@ -64,7 +64,8 @@ function injectMocks() {
 
   Module._cache[ADMIN_REPO_PATH] = {
     exports: {
-      getAdminByEmail: (...args: any[]) => getAdminByEmailMock(...args),
+      getAdminByEmailAnyCollection: (...args: any[]) =>
+        getAdminByEmailAnyCollectionMock(...args),
     },
   } as any;
 
@@ -164,7 +165,7 @@ describe("POST /api/admin/cerrar-categoria (S6)", () => {
     delete Module._cache[ADMIN_BUTTON_PATH];
 
     verifyIdTokenMock.mockResolvedValue({ uid: FIREBASE_UID, email: ADMIN_EMAIL });
-    getAdminByEmailMock.mockResolvedValue({
+    getAdminByEmailAnyCollectionMock.mockResolvedValue({
       empty: false,
       docs: [{ data: () => ({ Nombre: "Eric" }) }],
     });
@@ -203,7 +204,7 @@ describe("POST /api/admin/cerrar-categoria (S6)", () => {
   });
 
   it("rejects an authenticated user that is not an administrator", async () => {
-    getAdminByEmailMock.mockResolvedValue({ empty: true, docs: [] });
+    getAdminByEmailAnyCollectionMock.mockResolvedValue({ empty: true, docs: [] });
 
     const res = await request(createApp())
       .post("/api/admin/cerrar-categoria")
