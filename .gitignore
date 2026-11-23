@@ -1,6 +1,7 @@
 # Credenciales y secretos
 .env
 .env.*
+!.env.example
 secrets/
 
 # Dependencias

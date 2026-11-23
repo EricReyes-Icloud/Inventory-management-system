@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Colibrí">
+  <rect width="192" height="192" rx="32" fill="#1b5e20" />
+  <path d="M96 150c-30 0-52-22-52-52S66 46 96 46s52 22 52 52-22 52-52 52z" fill="#f6f7f3" />
+  <path d="M96 62c14 0 25 11 25 25 0 16-14 31-25 42-11-11-25-26-25-42 0-14 11-25 25-25z" fill="#ffca28" />
+  <path d="M120 84l30-14-14 28z" fill="#26c6da" />
+  <circle cx="96" cy="88" r="8" fill="#1b5e20" />
+</svg>
