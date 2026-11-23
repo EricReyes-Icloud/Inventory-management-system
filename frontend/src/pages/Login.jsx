@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase.js";
 import { loginWithIdToken } from "../api.js";
@@ -7,6 +7,8 @@ import { describeLoginError, runLogin } from "../loginFlow.js";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const sessionMessage = location.state && location.state.sessionMessage;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -49,6 +51,12 @@ export default function LoginPage() {
       <form className="login-card" onSubmit={handleSubmit}>
         <h1>Iniciar sesión</h1>
         <p className="login-subtitle">Condimentos El Colibrí</p>
+
+        {sessionMessage && (
+          <p className="login-notice" role="status">
+            {sessionMessage}
+          </p>
+        )}
 
         <div className="login-field">
           <label htmlFor="login-email">Correo electrónico</label>

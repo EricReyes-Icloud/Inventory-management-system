@@ -179,8 +179,10 @@ describe("routing", () => {
     expect(html).toMatch(/Iniciar sesión/i);
     expect(html).toContain('type="password"');
   });
-  it("/ renders the Dashboard placeholder", () => {
-    expect(renderAt("/").html).toContain("Dashboard");
+  it("/ is guarded and does not render the Dashboard on the server", () => {
+    const html = renderAt("/").html;
+    expect(html).not.toContain("Dashboard");
+    expect(read("src/App.jsx")).toContain("<ProtectedRoute>");
   });
   // No DOM environment is installed, so the Navigate effect cannot run here;
   // the redirect is asserted statically plus the absence of a dashboard leak.
