@@ -1,6 +1,14 @@
 // Verifier probes for S3 config + api + firebase client contract.
 import { describe, expect, it, vi, afterEach } from "vitest";
 
+// App now imports the real Login page, which initializes the Firebase client.
+// Seed harmless config before static imports are evaluated.
+vi.hoisted(() => {
+  process.env.VITE_FIREBASE_API_KEY ||= "AIza-probe";
+  process.env.VITE_FIREBASE_AUTH_DOMAIN ||= "probe.firebaseapp.com";
+  process.env.VITE_FIREBASE_PROJECT_ID ||= "probe-project";
+});
+
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); });
 
 describe("getFirebaseConfig", () => {
@@ -125,6 +133,7 @@ describe("firebase.js", () => {
   });
 
   it("fails fast with a coded error when Firebase env is missing", async () => {
+    for (const key of ["VITE_FIREBASE_API_KEY", "VITE_FIREBASE_AUTH_DOMAIN", "VITE_FIREBASE_PROJECT_ID"]) vi.stubEnv(key, "");
     let err;
     try { await import("./firebase.js"); } catch (e) { err = e; }
     expect(err?.code).toBe("missing_firebase_config");
@@ -166,7 +175,9 @@ function renderAt(pathname) {
 
 describe("routing", () => {
   it("/login renders the Login page", () => {
-    expect(renderAt("/login").html).toContain("Login");
+    const html = renderAt("/login").html;
+    expect(html).toMatch(/Iniciar sesión/i);
+    expect(html).toContain('type="password"');
   });
   it("/ renders the Dashboard placeholder", () => {
     expect(renderAt("/").html).toContain("Dashboard");
@@ -176,7 +187,7 @@ describe("routing", () => {
   it("unknown path /nope resolves to the wildcard redirect route", () => {
     const { html } = renderAt("/nope");
     expect(html).not.toContain("Dashboard");
-    expect(html).not.toContain("Login");
+    expect(html).not.toMatch(/Iniciar sesión/i);
     expect(read("src/App.jsx")).toContain('<Route path="*" element={<Navigate to="/login" replace />} />');
   });
 });
