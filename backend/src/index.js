@@ -20,6 +20,8 @@ const adminButtonRoutes = require("./routes/admin.button.routes.js");
 
 const adminContabilidadRoutes = require("./routes/admin.contabilidad.routes.js")
 
+const authRoutes = require("./routes/auth");
+
 
 // Creamos el servidor y permitimos que entienda json en el body
 const app = express();
@@ -55,6 +57,8 @@ app.use(createCorsGuard());
 // Conectamos nuestros modulos al servidor 
 app.use("/api/productos", productosRouter);
 app.use("/api/ventas", ventasRouter);
+
+app.use("/api/auth", authRoutes);
 
 app.use("/api/whatsapp", whatsappRoutes);
 

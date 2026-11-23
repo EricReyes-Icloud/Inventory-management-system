@@ -77,4 +77,30 @@ function createPedidoLibreRateLimiter() {
   });
 }
 
-module.exports = { createWebhookRateLimiter, createPedidoLibreRateLimiter };
+/**
+ * Limiter for the login endpoint, keyed by client IP.
+ *
+ * Unlike the order and webhook limiters this one guards unauthenticated
+ * traffic: there is no verified identity to key on yet, so IP is the only
+ * stable signal available. It is mounted inside /api/auth so its budget is
+ * independent of the order-creation endpoints.
+ *
+ * @returns {import("express").RequestHandler}
+ */
+function createLoginRateLimiter() {
+  const { windowMs, max } = currentConfig();
+
+  return rateLimit({
+    windowMs,
+    limit: max,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    handler: tooManyRequests,
+  });
+}
+
+module.exports = {
+  createWebhookRateLimiter,
+  createPedidoLibreRateLimiter,
+  createLoginRateLimiter,
+};

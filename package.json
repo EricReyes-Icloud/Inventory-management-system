@@ -16,7 +16,8 @@
     "test": "npm run test -w backend",
     "test:ci": "vitest run",
     "build": "npm run build -w backend",
-    "seed:catalog": "node scripts/seed-sinonimos.js"
+    "seed:catalog": "node scripts/seed-sinonimos.js",
+    "seed:admins": "node backend/scripts/seed-admins.js"
   },
   "repository": {
     "type": "git",

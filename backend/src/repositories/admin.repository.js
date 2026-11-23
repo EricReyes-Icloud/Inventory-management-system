@@ -39,6 +39,36 @@ async function getAdminByEmail(email) {
 }
 
 /**
+ * Busca un admin por email en las tres subcolecciones reales.
+ *
+ * `getAdminByEmail` solo consulta `Admin`, pero los otros dos administradores
+ * viven en `Admin_2` y `Admin_3`. Esta función es aditiva: no modifica el
+ * comportamiento de la función compartida. Devuelve el primer snapshot con
+ * resultados, o un snapshot vacío si el email no pertenece a ningún admin.
+ * Un error de Firestore se propaga: un fallo de lectura no debe disfrazarse de
+ * "admin no encontrado".
+ *
+ * @param {string} email
+ * @returns {Promise<FirebaseFirestore.QuerySnapshot>}
+ */
+async function getAdminByEmailAnyCollection(email) {
+  const collections = ["Admin", "Admin_2", "Admin_3"];
+  for (const col of collections) {
+    const snap = await db
+      .collection("Usuarios")
+      .doc("Usuarios")
+      .collection(col)
+      .where("Email", "==", email)
+      .where("Activo", "==", true)
+      .where("Rol", "==", "admin")
+      .limit(1)
+      .get();
+    if (!snap.empty) return snap;
+  }
+  return { empty: true, docs: [] };
+}
+
+/**
  * Obtiene todos los admins con un rol específico.
  * @param {string} rol
  * @returns {Promise<FirebaseFirestore.QuerySnapshot>}
@@ -184,6 +214,7 @@ async function setAdminAction(mesAnio, categoria, data) {
 module.exports = {
   // Admin
   getAdminByEmail,
+  getAdminByEmailAnyCollection,
   getAdminByRol,
   getAdminByTelefono,
   normalizarTelefono,

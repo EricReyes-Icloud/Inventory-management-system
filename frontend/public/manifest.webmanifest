@@ -1,0 +1,18 @@
+{
+  "name": "Condimentos El Colibrí",
+  "short_name": "Colibrí",
+  "description": "Gestión de inventario y contabilidad",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f3",
+  "theme_color": "#1b5e20",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
