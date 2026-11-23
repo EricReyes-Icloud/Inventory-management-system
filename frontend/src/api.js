@@ -16,17 +16,21 @@ export async function loginWithIdToken(idToken) {
   });
 
   let payload = null;
+  let parsed = false;
   try {
     payload = await response.json();
+    parsed = true;
   } catch {
     // A non-JSON body (proxy error, malformed JSON) is still a failed login.
   }
 
-  if (!response.ok) {
+  const errorCode = (payload && payload.error) || `http_${response.status}`;
+
+  if (!response.ok || !parsed) {
     const error = new Error(
       (payload && payload.error) || `login_failed_${response.status}`
     );
-    error.code = (payload && payload.error) || `http_${response.status}`;
+    error.code = errorCode;
     error.status = response.status;
     throw error;
   }
